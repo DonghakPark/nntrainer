@@ -27,8 +27,8 @@ namespace nntrainer {
 void SwapDevice::start(size_t size) {
   if (fd > 0)
     return;
-
   fd = open(dev_path.c_str(), O_RDWR | O_CREAT | O_TRUNC | O_SYNC, 0666UL);
+
   NNTR_THROW_IF(fd < 0, std::runtime_error)
     << "SwapDevice: open file: " << dev_path;
 
@@ -49,7 +49,8 @@ void SwapDevice::start(size_t size) {
     << "SwapDevice: seek file: " << dev_path;
 }
 
-void *SwapDevice::getBuffer(off_t offset, size_t size, bool alloc_only) {
+void *SwapDevice::getBuffer(off_t offset, size_t size, void *memory_ptr,
+                            bool alloc_only) {
   NNTR_THROW_IF(fd <= 0, std::runtime_error)
     << "SwapDevice: Device is not started";
 
@@ -60,16 +61,17 @@ void *SwapDevice::getBuffer(off_t offset, size_t size, bool alloc_only) {
   size_t len = size + diff;
 
   char *ptr = static_cast<char *>(
-    mmap(NULL, len, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, off));
-  NNTR_THROW_IF(ptr == (void *)-1, std::runtime_error)
+    mmap(memory_ptr, len, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, off));
+
+  NNTR_THROW_IF(ptr == ((void *)-1), std::runtime_error)
     << "SwapDevice: mmap: " << std::string(std::strerror(errno));
 
-  void *buf = static_cast<void *>(ptr + diff);
-  mapped[buf] = std::make_tuple(ptr, len, offset, (ssize_t)size);
+  mapped[ptr] = std::make_tuple(ptr, len, offset, (ssize_t)size);
+  is_unmapped.insert(std::make_pair(ptr, false));
 
   ++num_loaded_tensors;
+  return ptr;
 
-  return buf;
 #else
   off_t off;
   ssize_t len;
@@ -121,7 +123,6 @@ void SwapDevice::putBuffer(void *ptr, bool dealloc_only) {
       << "SwapDevice: write file: " << len << "::" << std::to_string(size)
       << dev_path;
   }
-
   ret = munmap(std::get<void *>(info), std::get<size_t>(info));
   NNTR_THROW_IF(ret == -1, std::runtime_error)
     << "SwapDevice: munmap: " << std::string(std::strerror(errno));
@@ -176,6 +177,7 @@ void SwapDevice::finish() {
   for (auto &[ptr, info] : mapped)
     free(ptr);
   mapped.clear();
+  is_unmapped.clear();
 #else
   for (auto &alloc : allocated)
     free(alloc.first);
