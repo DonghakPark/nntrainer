@@ -98,22 +98,25 @@ CachePool::CachePool(const std::string &n) :
   name(n),
   execution_mode_(ml::train::ExecutionMode::TRAIN),
   swap_device(std::make_shared<SwapDevice>(n + "_" + std::to_string(getpid()) +
-                                           "_" + std::to_string(pool_id++))) {}
+                                           "_" + std::to_string(pool_id++))) {
+}
 
 CachePool::CachePool(const std::string &path, const std::string &n) :
-  name(n), execution_mode_(ml::train::ExecutionMode::TRAIN) {
+  name(n),
+  execution_mode_(ml::train::ExecutionMode::TRAIN) {
   if (path.empty())
     swap_device = std::make_shared<SwapDevice>(
       n + "_" + std::to_string(getpid()) + "_" + std::to_string(pool_id++));
   else
     swap_device =
       std::make_shared<SwapDevice>(path, n + "_" + std::to_string(getpid()) +
-                                           "_" + std::to_string(pool_id++));
+                                         "_" + std::to_string(pool_id++));
 }
 
 CachePool::CachePool(const std::string &path, const std::string &name_,
                      ml::train::ExecutionMode exec_mode_) :
-  name(name_), execution_mode_(exec_mode_) {
+  name(name_),
+  execution_mode_(exec_mode_) {
   if (path.empty())
     swap_device = std::make_shared<SwapDevice>(
       name_ + "_" + std::to_string(getpid()) + "_" + std::to_string(pool_id++));
@@ -156,6 +159,9 @@ void CachePool::deallocate() {
 
   actives.clear();
   swap_device->finish();
+
+  if (execution_mode_ == ml::train::ExecutionMode::INFERENCE)
+    MemoryPool::deallocate();
 }
 
 void CachePool::validate(unsigned int id) {
