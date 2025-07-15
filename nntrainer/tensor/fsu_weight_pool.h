@@ -52,6 +52,8 @@ struct ElementInfo {
   std::shared_ptr<MemoryData> mem_data;
   int load_task_id{};
   LoadState load_state;
+  void *mmap_ptr;
+  size_t mmap_len;
 };
 
 /**
@@ -90,13 +92,11 @@ public:
   void loadTensor(unsigned int order);
 
   void setFsuWeightPath(std::string path) override {
-    std::cout << "path set & open fd" << std::endl;
     weight_file_path = path;
     weightFileOpen();
   }
 
   bool checkAllLoadComplete(unsigned int order);
-  void loadFromFile(std::vector<unsigned int> ids);
   bool loadAllinOrder(unsigned int order);
   void setWeightOffset(std::vector<std::pair<size_t, size_t>> offsets);
 protected:
@@ -110,10 +110,11 @@ private:
   TaskExecutor *load_task_executor;   /**< task executor */
   std::unordered_map<unsigned int, ExecIds> order_to_exec_ids;
   std::vector<unsigned int> id_bank;
+  unsigned int max_exec_id;
   unsigned int load_batch_size;
 
   std::mutex state_mutex;
-  std::mutex memcpy_mutex;
+  std::mutex id_bank_mutex;
 };
 } // namespace nntrainer
 #endif // FSU_WEIGHT_POOL_H

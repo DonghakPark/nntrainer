@@ -30,7 +30,7 @@ namespace nntrainer {
  * @enum   LoadState
  * @brief  enum to describe Load State
  */
-enum class LoadState { Idle, Loading, Loaded, Unloading };
+enum class LoadState { Idle, Loading, Loaded, Unloading, UnLoaded };
 
 /**
  * @class   CacheLoader
