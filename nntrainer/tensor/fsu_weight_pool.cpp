@@ -16,8 +16,7 @@
 namespace nntrainer {
 
 FsuWeightPool::FsuWeightPool() : fd(-1), load_batch_size(1) {
-  std::cout << "FSU Weight Pool is Allocated" << std::endl;
-  load_task_executor = new TaskExecutor("loadPool", 8);
+  // load_task_executor = new TaskExecutor("loadPool", 8);
 }
 
 FsuWeightPool::~FsuWeightPool() {
@@ -48,8 +47,9 @@ void FsuWeightPool::weightFileClose() {
   fd = -1;
 }
 
-void FsuWeightPool::setWeightOffset(std::vector<std::pair<size_t, size_t>> offsets) {
-  int id_idx = 0;
+void FsuWeightPool::setWeightOffset(
+  std::vector<std::pair<size_t, size_t>> offsets) {
+  int id_idx = 1;
   for (auto element : offsets) {
     elements[id_idx].start_offset = element.first;
     elements[id_idx].weight_len = element.second;
@@ -60,7 +60,6 @@ void FsuWeightPool::setWeightOffset(std::vector<std::pair<size_t, size_t>> offse
 void FsuWeightPool::allocate() {
 
   size_t pool_size = size();
-
   NNTR_THROW_IF(pool_size == 0, std::runtime_error)
     << "Allocating memory pool with size 0";
 
@@ -68,8 +67,6 @@ void FsuWeightPool::allocate() {
 }
 
 void FsuWeightPool::deallocate() { MemoryPool::deallocate(); }
-
-
 
 unsigned int FsuWeightPool::requestMemory(size_t bytes, unsigned int start_time,
                                           unsigned int end_time,
@@ -94,7 +91,7 @@ std::shared_ptr<MemoryData> FsuWeightPool::getMemory(unsigned int id) {
   elements[id] = {id, memory_ptr, false, 0, 0, mem_data, -1, LoadState::Idle};
   auto &o = exe_order[0];
   order_to_exec_ids[o].insert(id);
-
+  max_exec_id = std::max(max_exec_id, id);
   return mem_data;
 }
 
@@ -102,26 +99,10 @@ void FsuWeightPool::clear() {
   deallocate();
   MemoryPool::clear();
 }
-void FsuWeightPool::validate(unsigned int id) {
-  std::cout << "validate start " << std::endl;
-  if (!elements[id].active) {
-    id_bank.push_back(id);
-  }
-  if (id_bank.size() == load_batch_size) {
-    std::cout << "id_bank { ";
-    for (auto element : id_bank) {
-      std::cout << element << ", ";
-    }
-    std::cout << " } " << std::endl;
-    loadFromFile(id_bank);
-    id_bank.clear();
-    std::cout << "validate end" << std::endl;
-  }
-}
-void FsuWeightPool::loadFromFile(std::vector<unsigned int> ids) {
-  NNTR_THROW_IF(fd <= 0, std::runtime_error)
-    << "[FSU_ELEM] LoadFromFile failed : Device is not started";
 
+
+void FsuWeightPool::validate(unsigned int id) {
+  auto validate_start = std::chrono::high_resolution_clock::now();
 #if defined(_WIN32)
   SYSTEM_INFO sysInfo;
   GetSystemInfo(&sysInfo);
@@ -130,105 +111,51 @@ void FsuWeightPool::loadFromFile(std::vector<unsigned int> ids) {
   auto page_size = sysconf(_SC_PAGE_SIZE);
 #endif
 
-  auto total_len = 0;
-  auto start_offset = elements[ids.front()].start_offset;
-  for (auto id : ids) {
-    total_len += elements[id].weight_len;
-  }
+  auto start_offset = elements[id].start_offset;
 
   size_t off = (start_offset / page_size) * page_size;
   size_t diff = start_offset - off;
-  size_t len = total_len + diff;
+  size_t len = elements[id].weight_len + diff;
 
-  std::cout << "start mmap " << "- len : " << len << " fd : " << fd << " off : " << off << std::endl;
   char *ptr = static_cast<char *>(
-    mmap(nullptr, len, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, off));
+    mmap(nullptr, len, PROT_READ, MAP_PRIVATE, fd, off));
 
-  const size_t error_buflen = 100;
-  char error_buf[error_buflen];
-  NNTR_THROW_IF(ptr == MAP_FAILED, std::runtime_error)
-    << "[FSU_ELEM] mmap failed : "
-    << SAFE_STRERROR(errno, error_buf, error_buflen);
+#ifndef _WIN32
+  madvise(ptr, len, MADV_SEQUENTIAL);
+#endif
 
-  // memcpy
-  size_t offset_sum = 0;
-  for (auto id : ids) {
-    void *now_ptr = static_cast<void *>(ptr + diff + offset_sum);
-    std::cout << "memory_ptr : " << elements[id].memory_ptr
-              << " now_ptr : " << now_ptr
-              << " weight_len : " << elements[id].weight_len << std::endl;
-    memcpy(elements[id].memory_ptr, now_ptr, elements[id].weight_len);
-    offset_sum += elements[id].weight_len;
 
-    elements[id].mem_data->setAddr((void *)elements[id].memory_ptr);
-    elements[id].mem_data->setValid(true);
-    elements[id].active = true;
-  }
+  void *now_ptr =
+    static_cast<void *>(ptr + diff);
+  memcpy(elements[id].memory_ptr, now_ptr, elements[id].weight_len);
 
+  elements[id].mem_data->setAddr((void *)elements[id].memory_ptr);
+  elements[id].mem_data->setValid(true);
+  elements[id].active = true;
+  elements[id].load_state = LoadState::Loaded;
   const auto ret = munmap(ptr, len);
-  NNTR_THROW_IF(ret == -1, std::runtime_error)
-    << "[FSU_ELEM] munmap failed : "
-    << SAFE_STRERROR(errno, error_buf, error_buflen);
 }
 
 bool FsuWeightPool::loadAllinOrder(unsigned int order) {
-  if (!load_task_executor) {
-    ml_loge("init is needed");
-    return false;
-  }
-
-  std::set<unsigned int> exec_ids = order_to_exec_ids[order];
-
+  auto exec_ids = order_to_exec_ids[order];
   for (auto &id : exec_ids) {
-    {
-      std::lock_guard<std::mutex> lock(state_mutex);
-      if (elements[id].load_state == LoadState::Loading ||
-          elements[id].load_state == LoadState::Loaded) {
-        return -1;
-      }
-      elements[id].load_state = LoadState::Loading;
-    }
-
-    int load_task_id_ = load_task_executor->submit(
-      [this, id](void *data) {
-        this->validate(id);
-        std::lock_guard<std::mutex> lock(this->state_mutex);
-        this->elements[id].load_state = LoadState::Loaded;
-      },
-      (void *)(std::uintptr_t)id);
-
-    elements[id].load_task_id = load_task_id_;
-
-    return load_task_id_;
+    validate(id);
   }
-
   return true;
 }
 
 void FsuWeightPool::inActive(unsigned int order) {
-
   auto exec_ids = order_to_exec_ids[order];
 
   for (auto &id : exec_ids) {
-    int load_task_id_ = elements[id].load_task_id;
-    if (load_task_id_ >= 0) {
-      load_task_executor->releaseTask(load_task_id_);
-      elements[id].load_task_id = -1;
-      elements[id].load_state = LoadState::Unloading;
-      elements[id].active = false;
-    }
+    elements[id].load_task_id = -1;
+    elements[id].load_state = LoadState::UnLoaded;
+    elements[id].active = false;
   }
 }
 
 bool FsuWeightPool::checkAllLoadComplete(unsigned int order) {
-  std::set<unsigned int> exec_id = order_to_exec_ids[order];
 
-  for (auto &id : exec_id) {
-    int load_task_id = elements[id].load_task_id;
-    if (load_task_id >= 0) {
-      load_task_executor->wait(load_task_id);
-    }
-  }
   return true;
 }
 
