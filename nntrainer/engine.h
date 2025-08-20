@@ -29,10 +29,10 @@
 #include <context.h>
 #include <mem_allocator.h>
 #include <nntrainer_error.h>
-
-#ifdef ENABLE_OPENCL
-#include <cl_context.h>
-#endif
+//
+// #ifdef ENABLE_OPENCL
+// #include <cl_context.h>
+// #endif
 
 namespace nntrainer {
 
