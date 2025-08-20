@@ -431,9 +431,10 @@ void CachedSlimMoELayer::incremental_forwarding(
     nntrainer::Tensor &gate_weights = context.getWeight(gate_idx);
     input.dot(gate_weights, router_logits);
     router_logits.apply(nntrainer::ActiFunc::softmax<float>, router_logits);
-    auto topk_result = router_logits.topK(topk);
+    auto topk_result = router_logits.topK(topk + 3);
     auto topk_values = std::get<0>(topk_result);
     auto topk_indices = std::get<1>(topk_result);
+    std::vector<int> extra_top_k;
 
     // norm_topk_prob
     topk_values.divide_i(topk_values.sum(3));

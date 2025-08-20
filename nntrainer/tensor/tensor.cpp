@@ -36,6 +36,11 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#if defined(_WIN32)
+#include <Memoryapi.h>
+#include <Sysinfoapi.h>
+#endif
+
 namespace nntrainer {
 
 Tensor::Tensor(
@@ -1599,16 +1604,23 @@ Tensor Tensor::getSharedDataTensor(const TensorDim dim_, size_t offset,
 }
 
 void Tensor::activate() {
-
+#if defined(_WIN32)
+  SYSTEM_INFO sysInfo;
+  GetSystemInfo(&sysInfo);
+  auto page_size = sysInfo.dwAllocationGranularity;
+#else
+  auto page_size = sysconf(_SC_PAGE_SIZE);
+#endif
   NNTR_THROW_IF(!is_virtual, std::invalid_argument)
     << "non-virtual tensor cannot call activate()";
 
   auto file_offset = getFileOffset();
-  size_t off = (file_offset / 4096) * 4096;
+  size_t off = (file_offset / page_size) * page_size;
   size_t diff = file_offset - off;
   size_t len = getMemoryBytes() + diff;
 
   mapped_ptr = mmap(NULL, len, PROT_READ, MAP_PRIVATE, this->fd, off);
+  madvise(mapped_ptr,len, MADV_WILLNEED);
   if (mapped_ptr == MAP_FAILED) {
     std::cerr << "[activate] mmap failed: " << strerror(errno) << std::endl;
   }
@@ -1616,7 +1628,13 @@ void Tensor::activate() {
 }
 
 void Tensor::deactivate() {
-
+#if defined(_WIN32)
+  SYSTEM_INFO sysInfo;
+  GetSystemInfo(&sysInfo);
+  auto page_size = sysInfo.dwAllocationGranularity;
+#else
+  auto page_size = sysconf(_SC_PAGE_SIZE);
+#endif
   NNTR_THROW_IF(!is_virtual, std::invalid_argument)
     << "non-virtual tensor cannot call deactivate()";
 
@@ -1625,7 +1643,7 @@ void Tensor::deactivate() {
   };
 
   auto file_offset = getFileOffset();
-  size_t off = (file_offset / 4096) * 4096;
+  size_t off = (file_offset / page_size) * page_size;
   size_t diff = file_offset - off;
   size_t len = getMemoryBytes() + diff;
 
