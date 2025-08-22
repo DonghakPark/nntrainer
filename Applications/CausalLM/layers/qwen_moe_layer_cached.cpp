@@ -431,7 +431,7 @@ void CachedSlimMoELayer::incremental_forwarding(
     nntrainer::Tensor &gate_weights = context.getWeight(gate_idx);
     input.dot(gate_weights, router_logits);
     router_logits.apply(nntrainer::ActiFunc::softmax<float>, router_logits);
-    auto topk_result = router_logits.topK(topk + 3);
+    auto topk_result = router_logits.topK(topk + 5);
     auto topk_values = std::get<0>(topk_result);
     auto topk_indices = std::get<1>(topk_result);
     std::vector<int> extra_top_k;
@@ -442,12 +442,21 @@ void CachedSlimMoELayer::incremental_forwarding(
     const uint32_t *indices_data = topk_indices.getData<uint32_t>();
     std::vector<std::vector<std::pair<unsigned, float>>> expert_assignments(
       num_experts);
+
     // Set expert mask
     for (int i = 0; i < static_cast<int>(total_tokens); ++i) {
       for (int k = 0; k < static_cast<int>(topk); ++k) {
         unsigned expert_idx = indices_data[i * topk + k];
         float weight = topk_values.getValue<float>(i, 0, 0, k);
         expert_assignments[expert_idx].emplace_back(i, weight);
+      }
+    }
+
+    // get extra topk
+    for (int i = 0; i < static_cast<int>(total_tokens); ++i) {
+      for (int k = 0; k < static_cast<int>(topk + 5); ++k) {
+        unsigned expert_idx = indices_data[i * topk + k];
+        extra_top_k.push_back(expert_idx);
       }
     }
 
@@ -470,8 +479,8 @@ void CachedSlimMoELayer::incremental_forwarding(
 
       target_idx_vector.push_back(expert_idx);
     }
-    // int hit_count = 0;
-    // int miss_count = 0;
+    int hit_count = 0;
+    int miss_count = 0;
 
 #pragma omp parallel for schedule(dynamic)
     for (int expert_idx : target_idx_vector) {
@@ -484,7 +493,7 @@ void CachedSlimMoELayer::incremental_forwarding(
 
         {
           std::lock_guard<std::mutex> lock(cache_mutex);
-          // miss_count += 1;
+          miss_count += 1;
           loaded_expert_deque.push_back(expert_idx);
           iteration_map[expert_idx] = --loaded_expert_deque.end();
           need_load[expert_idx] = false;
@@ -495,17 +504,15 @@ void CachedSlimMoELayer::incremental_forwarding(
           context.getWeight(expert_gate_proj_indices[expert_idx]),
           context.getWeight(expert_up_proj_indices[expert_idx]),
           context.getWeight(expert_down_proj_indices[expert_idx]), hidden_size);
-        // need_load_expert.push_back(expert_idx);
       } else {
         {
           std::lock_guard<std::mutex> lock(cache_mutex);
-          // hit_count += 1;
-          if (iteration_map.find(expert_idx) != iteration_map.end()) {
-            loaded_expert_deque.erase(iteration_map[expert_idx]);
-          }
-          loaded_expert_deque.push_back(expert_idx);
-          iteration_map[expert_idx] = --loaded_expert_deque.end();
-          // load_expert.push_back(expert_idx);
+          hit_count += 1;
+          // if (iteration_map.find(expert_idx) != iteration_map.end()) {
+          //   loaded_expert_deque.erase(iteration_map[expert_idx]);
+          // }
+          // loaded_expert_deque.push_back(expert_idx);
+          // iteration_map[expert_idx] = --loaded_expert_deque.end();
         }
 
         compute_expert_forward_no_critical(
@@ -517,6 +524,16 @@ void CachedSlimMoELayer::incremental_forwarding(
     }
     // printf("hit count: %d, miss count: %d\n", hit_count, miss_count);
 
+    if (to - from != 1) {
+      for (int i = extra_top_k.size() - 1; i >= 0; i--) {
+        if (iteration_map.find(extra_top_k[i]) != iteration_map.end()) {
+          loaded_expert_deque.erase(iteration_map[extra_top_k[i]]);
+        }
+        loaded_expert_deque.push_back(extra_top_k[i]);
+        iteration_map[extra_top_k[i]] = --loaded_expert_deque.end();
+      }
+    }
+
 #pragma omp parallel
     while (loaded_expert_deque.size() > 16) {
       int target_idx;
@@ -527,6 +544,7 @@ void CachedSlimMoELayer::incremental_forwarding(
         iteration_map.erase(target_idx);
         need_load[target_idx] = true;
       }
+
       context.getWeight(expert_gate_proj_indices[target_idx]).deactivate();
       context.getWeight(expert_up_proj_indices[target_idx]).deactivate();
       context.getWeight(expert_down_proj_indices[target_idx]).deactivate();

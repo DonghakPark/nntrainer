@@ -104,43 +104,43 @@ void stop_and_print_peak() {
 int main(int argc, char *argv[]) {
 
   /** Register all runnable causallm models to factory */
-  // causallm::Factory::Instance().registerModel(
-  //   "LlamaForCausalLM", [](json cfg, json generation_cfg, json nntr_cfg) {
-  //     return std::make_unique<causallm::CausalLM>(cfg, generation_cfg,
-  //                                                 nntr_cfg);
-  //   });
-  // causallm::Factory::Instance().registerModel(
-  //   "Qwen3ForCausalLM", [](json cfg, json generation_cfg, json nntr_cfg) {
-  //     return std::make_unique<causallm::Qwen3CausalLM>(cfg, generation_cfg,
-  //                                                      nntr_cfg);
-  //   });
-  // causallm::Factory::Instance().registerModel(
-  //   "Qwen3MoeForCausalLM", [](json cfg, json generation_cfg, json nntr_cfg) {
-  //     return std::make_unique<causallm::Qwen3MoECausalLM>(cfg, generation_cfg,
-  //                                                         nntr_cfg);
-  //   });
-  // causallm::Factory::Instance().registerModel(
-  //   "Qwen3SlimMoeForCausalLM",
-  //   [](json cfg, json generation_cfg, json nntr_cfg) {
-  //     return std::make_unique<causallm::Qwen3SlimMoECausalLM>(
-  //       cfg, generation_cfg, nntr_cfg);
-  //   });
-  // causallm::Factory::Instance().registerModel(
-  //   "Qwen3CachedSlimMoeForCausalLM",
-  //   [](json cfg, json generation_cfg, json nntr_cfg) {
-  //     return std::make_unique<causallm::Qwen3CachedSlimMoECausalLM>(
-  //       cfg, generation_cfg, nntr_cfg);
-  //   });
-  // causallm::Factory::Instance().registerModel(
-  //   "NNTRQwen3ForCausalLM", [](json cfg, json generation_cfg, json nntr_cfg) {
-  //     return std::make_unique<causallm::NNTRQwen3CausalLM>(cfg, generation_cfg,
-  //                                                          nntr_cfg);
-  //   });
-  // causallm::Factory::Instance().registerModel(
-  //   "NNTRQwen3MoECausalLM", [](json cfg, json generation_cfg, json nntr_cfg) {
-  //     return std::make_unique<causallm::NNTRQwen3MoECausalLM>(
-  //       cfg, generation_cfg, nntr_cfg);
-  //   });
+  causallm::Factory::Instance().registerModel(
+    "LlamaForCausalLM", [](json cfg, json generation_cfg, json nntr_cfg) {
+      return std::make_unique<causallm::CausalLM>(cfg, generation_cfg,
+                                                  nntr_cfg);
+    });
+  causallm::Factory::Instance().registerModel(
+    "Qwen3ForCausalLM", [](json cfg, json generation_cfg, json nntr_cfg) {
+      return std::make_unique<causallm::Qwen3CausalLM>(cfg, generation_cfg,
+                                                       nntr_cfg);
+    });
+  causallm::Factory::Instance().registerModel(
+    "Qwen3MoeForCausalLM", [](json cfg, json generation_cfg, json nntr_cfg) {
+      return std::make_unique<causallm::Qwen3MoECausalLM>(cfg, generation_cfg,
+                                                          nntr_cfg);
+    });
+  causallm::Factory::Instance().registerModel(
+    "Qwen3SlimMoeForCausalLM",
+    [](json cfg, json generation_cfg, json nntr_cfg) {
+      return std::make_unique<causallm::Qwen3SlimMoECausalLM>(
+        cfg, generation_cfg, nntr_cfg);
+    });
+  causallm::Factory::Instance().registerModel(
+    "Qwen3CachedSlimMoeForCausalLM",
+    [](json cfg, json generation_cfg, json nntr_cfg) {
+      return std::make_unique<causallm::Qwen3CachedSlimMoECausalLM>(
+        cfg, generation_cfg, nntr_cfg);
+    });
+  causallm::Factory::Instance().registerModel(
+    "NNTRQwen3ForCausalLM", [](json cfg, json generation_cfg, json nntr_cfg) {
+      return std::make_unique<causallm::NNTRQwen3CausalLM>(cfg, generation_cfg,
+                                                           nntr_cfg);
+    });
+  causallm::Factory::Instance().registerModel(
+    "NNTRQwen3MoECausalLM", [](json cfg, json generation_cfg, json nntr_cfg) {
+      return std::make_unique<causallm::NNTRQwen3MoECausalLM>(
+        cfg, generation_cfg, nntr_cfg);
+    });
 
   // Validate arguments
   if (argc < 2) {
@@ -177,11 +177,10 @@ int main(int argc, char *argv[]) {
     std::cout << weight_file << std::endl;
 
     // Initialize and run model
-    auto model = std::make_unique<causallm::Qwen3CachedSlimMoECausalLM>(
-            cfg, generation_cfg, nntr_cfg);
-      // causallm::Factory::Instance().create(
-      // cfg["architectures"].get<std::vector<std::string>>()[0], cfg,
-      // generation_cfg, nntr_cfg);
+    auto model = causallm::Factory::Instance().create(
+      cfg["architectures"].get<std::vector<std::string>>()[0], cfg,
+      generation_cfg, nntr_cfg);
+
     model->initialize();
     model->load_weight(weight_file);
 
