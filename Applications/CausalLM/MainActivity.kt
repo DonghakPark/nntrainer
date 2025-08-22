@@ -5,7 +5,13 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -13,24 +19,28 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
@@ -45,17 +55,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
-import com.samsung.sflare.ui.theme.DarkGray
-import com.samsung.sflare.ui.theme.LightGray
 import com.samsung.sflare.ui.theme.NNTRBLUE
-import com.samsung.sflare.ui.theme.TextGray
-import com.samsung.sflare.ui.theme.topbar_color
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
@@ -64,8 +73,9 @@ data class ChatMessage(val text: String, val role: String)
 class MainActivity : ComponentActivity() {
 
     private external fun processInput(input: String, app_path: String)
+    private external fun flareLoading(app_path: String)
 
-    private val responseFlow = MutableStateFlow("Output will appear Here")
+    private val responseFlow = MutableStateFlow("")
 
     @Suppress("unused") // will use in jni(cpp code)
     fun onTokenReceived(token: String) {
@@ -74,6 +84,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val isInThinkMode = mutableStateOf(true)
+
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -81,14 +93,55 @@ class MainActivity : ComponentActivity() {
         System.loadLibrary("nntrainer_engine")
         Log.e("[SFlare]", "nntrainer engine Loaded")
 
+// val appPath = filesDir.absolutePath
+// flareLoading(appPath)
+
         enableEdgeToEdge()
         setContent {
             MaterialTheme {
+                val thinkMode by remember { isInThinkMode }
                 Scaffold(topBar = {
                     TopAppBar(
-                        title = { Text("SFlare") }, colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = topbar_color, titleContentColor = Color.White
-                        )
+                        title = {
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = "SFlare",
+                                    color = Color.Black
+                                )
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.White,
+                            titleContentColor = Color.Black
+                        ),
+                        actions = {
+                            TextButton(
+                                onClick = { isInThinkMode.value = !isInThinkMode.value },
+                                modifier = Modifier.border(
+                                    1.dp,
+                                    Color.Black,
+                                    RoundedCornerShape(24.dp)
+                                ),
+                            ) {
+                                Color.LightGray
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .padding(horizontal = 6.dp, vertical = 6.dp)
+                                )
+                                {
+                                    Text(
+                                        text = if (thinkMode) "🤔  Think Mode" else "⚡ Light Mode",
+                                        color = if (thinkMode) Color.Blue else Color.Black,
+                                    )
+                                }
+                            }
+                        }
                     )
                 }, content = { innerPadding ->
                     Surface(
@@ -97,7 +150,7 @@ class MainActivity : ComponentActivity() {
                             .padding(innerPadding),
                         color = MaterialTheme.colorScheme.background
                     ) {
-                        ChatbotScreen()
+                        ChatbotScreen(isInThinkMode = thinkMode)
                     }
                 })
             }
@@ -106,19 +159,22 @@ class MainActivity : ComponentActivity() {
 
 
     @Composable
-    fun ChatbotScreen() {
-        var inputText by remember { mutableStateOf("Give me a short introduction to large language model.") }
+    fun ChatbotScreen(isInThinkMode: Boolean) {
+        var inputText by remember {
+            mutableStateOf(
+                "Hi,"
+//                "Give me a short introduction to large language model."
+            )
+        }
         val currentResponse by responseFlow.collectAsStateWithLifecycle()
 
-        // 1. 대화 기록을 ChatMessage 리스트로 관리
         var conversationHistory by remember { mutableStateOf<List<ChatMessage>>(listOf()) }
-        val listState = rememberLazyListState()
+        val scrollState = rememberScrollState()
 
-        // JNI에서 새로운 토큰이 들어올 때마다 마지막 메시지 업데이트
+        // This effect updates the last message in the history with the new streaming content.
         LaunchedEffect(currentResponse) {
             if (currentResponse.isNotBlank()) {
                 val lastMessage = conversationHistory.lastOrNull()
-                // 마지막 메시지가 AI의 답변일 경우, 내용을 덧붙여서 업데이트
                 if (lastMessage != null && lastMessage.role == "assistant") {
                     conversationHistory =
                         conversationHistory.dropLast(1) + lastMessage.copy(text = currentResponse)
@@ -126,55 +182,68 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        // 새 메시지가 추가되면 자동으로 스크롤
-        LaunchedEffect(conversationHistory.size) {
-            if (conversationHistory.isNotEmpty()) {
-                listState.animateScrollToItem(conversationHistory.lastIndex)
-            }
+        // This effect scrolls to the bottom when the conversation updates.
+        LaunchedEffect(conversationHistory.size, currentResponse) {
+            scrollState.animateScrollTo(scrollState.maxValue)
+        }
+        val interactionSource = remember { MutableInteractionSource() }
+        val isTextFieldFocused by interactionSource.collectIsFocusedAsState()
+
+        LaunchedEffect(isTextFieldFocused) {
+            delay(200)
+            scrollState.animateScrollTo(scrollState.maxValue)
         }
 
-        Surface(modifier = Modifier.fillMaxSize(), color = DarkGray) {
-            Column(
+        Surface(modifier = Modifier.fillMaxSize(), color = Color.White) {
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(horizontal = 16.dp)
             ) {
-                // 대화 내용 표시
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(vertical = 8.dp)
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = 80.dp)
+                        .verticalScroll(scrollState),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(conversationHistory) { message ->
+                    Spacer(modifier = Modifier.weight(1f))
+                    conversationHistory.forEach { message ->
                         if (message.role == "user") {
                             UserMessage(message.text)
                         } else {
-                            AssistantMessage(message.text)
+                            // Pass the full text to AssistantMessage, it will handle the parsing.
+                            AssistantMessage(message.text, isInThinkMode)
                         }
                     }
                 }
 
-                // 하단 입력창
                 Row(
                     modifier = Modifier
+                        .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                         .padding(top = 8.dp, bottom = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     TextField(
                         value = inputText,
                         onValueChange = { inputText = it },
-                        placeholder = { Text("메시지를 입력하세요", color = TextGray) },
+                        placeholder = { Text("Ask Anything", color = Color.Black) },
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(24.dp))
-                            .background(LightGray),
+                            .background(Color.White)
+                            .border(1.dp, Color.Black, RoundedCornerShape(24.dp)),
                         colors = TextFieldDefaults.colors(
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
-                            cursorColor = NNTRBLUE,
+                            focusedTextColor = Color.Black,
+                            unfocusedTextColor = Color.Black,
+                            cursorColor = Color.Black,
                             focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
+                            unfocusedIndicatorColor = Color.Transparent,
+
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedContainerColor = Color.Transparent
+
                         )
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -182,51 +251,60 @@ class MainActivity : ComponentActivity() {
                         onClick = {
                             if (inputText.isNotBlank()) {
                                 val userMessage = ChatMessage(inputText, "user")
-                                val assistantPlaceholder = ChatMessage("", "assistant")
 
-                                // 2. 사용자 질문과 AI 답변 placeholder를 대화 기록에 추가
+                                val assistantPlaceholderText =
+                                    if (isInThinkMode) "<think>" else ""
+                                val assistantPlaceholder =
+                                    ChatMessage(assistantPlaceholderText, "assistant")
+
+
                                 conversationHistory =
                                     conversationHistory + userMessage + assistantPlaceholder
 
-                                val fullPrompt =
+                                val fullPrompt = if (isInThinkMode) {
                                     "<|im_start|>user\n${inputText}<|im_end|>\n<|im_start|>assistant\n"
+                                } else {
+                                    "<|im_start|>user\n${inputText}<|im_end|>\n<think>\n</think>\n<|im_start|>assistant\n"
+                                }
 
-                                responseFlow.value = "" // 답변 스트림 초기화
+                                responseFlow.value = ""
                                 lifecycleScope.launch(Dispatchers.IO) {
                                     val appPath = filesDir.absolutePath
                                     processInput(fullPrompt, appPath)
                                 }
-                                inputText = "" // 입력창 비우기
+                                inputText = ""
                             }
                         },
-                        modifier = Modifier.size(48.dp),
+                        modifier = Modifier
+                            .size(48.dp)
+                            .border(1.dp, Color.Black, CircleShape),
                         shape = CircleShape,
                         contentPadding = PaddingValues(0.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = LightGray)
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White)
                     ) {
                         Icon(
                             imageVector = Icons.Default.KeyboardArrowUp,
                             contentDescription = "Send",
-                            tint = if (inputText.isNotBlank()) NNTRBLUE else TextGray
+                            tint = if (inputText.isNotBlank()) Color.Blue else Color.Black
                         )
                     }
                 }
+//                }
             }
         }
     }
 
-    //User Message Box
     @Composable
     fun UserMessage(text: String) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 8.dp),
-            horizontalAlignment = Alignment.End // 오른쪽 정렬
+            horizontalAlignment = Alignment.End
         ) {
             Text(
                 text = "You",
-                color = Color.White,
+                color = Color.Black,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 4.dp)
             )
@@ -237,7 +315,7 @@ class MainActivity : ComponentActivity() {
                             topStart = 16.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 16.dp
                         )
                     )
-                    .background(NNTRBLUE) // 사용자 메시지 배경색
+                    .background(NNTRBLUE)
                     .padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
                 Text(text = text, color = Color.Black)
@@ -245,9 +323,68 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Flare Answer Box
+    // --- ENTIRELY REWRITTEN AssistantMessage ---
     @Composable
-    fun AssistantMessage(text: String) {
+    fun AssistantMessage(text: String, isInThinkMode: Boolean) {
+        var isThinkProcessExpanded by remember { mutableStateOf(false) }
+
+        // Define tags and parse the incoming text
+        val thinkStartTag = ""
+        val thinkEndTag = "</think>"
+        val endTag = "<|im_end|>"
+        val isThinking = isInThinkMode && thinkEndTag !in text
+
+        val thinkingProcess = text
+            .substringBefore(thinkEndTag, missingDelimiterValue = if (isThinking) text else "")
+            .substringAfter(thinkStartTag, missingDelimiterValue = "")
+            .trim()
+
+        val finalAnswer = if (thinkEndTag in text) {
+            text.substringBefore(endTag, missingDelimiterValue = "")
+                .substringAfter(thinkEndTag, "")
+                .trim()
+        } else {
+            ""
+        }
+
+        val performanceResult = if (endTag in text) {
+            text.substringAfter(endTag, "").trim()
+        } else {
+            ""
+        }
+
+        val borderColor = if (isThinking) Color.Black else Color.Blue
+        val backgroundColor = Color.White
+        val textColor = Color.Black
+        val previewColor = Color.Black
+        val CircleColor = Color.Blue
+
+        var animatedPreviewText by remember { mutableStateOf("Thinking...") }
+
+        LaunchedEffect(thinkingProcess, isThinking) {
+            val lastLine = thinkingProcess.lines().lastOrNull { it.isNotBlank() }
+            if (isThinking && !lastLine.isNullOrBlank()) {
+                val words = lastLine.split(" ")
+                val visibleWords = mutableListOf<String>()
+                words.forEach { word ->
+                    visibleWords.add(word)
+                    var currentText = visibleWords.joinToString(" ")
+                    val maxChars = 50
+                    while (currentText.length > maxChars && visibleWords.size > 1) {
+                        visibleWords.removeAt(0)
+                        currentText = visibleWords.joinToString(" ")
+                    }
+                    animatedPreviewText = currentText
+
+                }
+            } else if (!isThinking && thinkingProcess.isNotBlank()) {
+                animatedPreviewText = "Show Thought Process"
+            } else {
+                animatedPreviewText = "Thinking..."
+            }
+        }
+
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -255,8 +392,8 @@ class MainActivity : ComponentActivity() {
             horizontalAlignment = Alignment.Start
         ) {
             Text(
-                text = "SFlare", // Name
-                color = Color.White,
+                text = "SFlare",
+                color = Color.Black,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 4.dp)
             )
@@ -267,10 +404,121 @@ class MainActivity : ComponentActivity() {
                             topStart = 4.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 16.dp
                         )
                     )
-                    .background(LightGray) // AI Response Background Color
+                    .border(
+                        width = 1.5.dp,
+                        color = borderColor,
+                        shape = RoundedCornerShape(
+                            topStart = 4.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 16.dp
+                        )
+
+                    )
+                    .background(backgroundColor)
                     .padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
-                Text(text = text, color = TextGray)
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // --- Thinking Process UI ---
+                    if (isInThinkMode && (isThinking || thinkingProcess.isNotBlank())) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { isThinkProcessExpanded = !isThinkProcessExpanded }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (isThinking) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                    color = CircleColor.copy(alpha = 0.7f),
+                                    strokeCap = StrokeCap.Round
+                                )
+                                Text(
+                                    text = " Thinking",
+                                    color = previewColor.copy(alpha = 0.8f),
+                                    fontSize = 14.sp
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = "Thought Process",
+                                    modifier = Modifier.size(20.dp),
+                                    tint = CircleColor.copy(alpha = 0.7f)
+                                )
+                            }
+                            Spacer(
+                                modifier = Modifier
+                                    .padding(horizontal = 8.dp)
+                                    .height(20.dp)
+                                    .width(1.dp)
+                                    .background(previewColor.copy(alpha = 0.2f))
+                            )
+
+                            Text(
+                                text = animatedPreviewText,
+                                color = previewColor.copy(alpha = 0.8f),
+                                modifier = Modifier.weight(1f),
+                                maxLines = 1,
+                                fontSize = 14.sp
+                            )
+                            Icon(
+                                imageVector = if (isThinkProcessExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                contentDescription = "Expand",
+                                tint = previewColor.copy(alpha = 0.7f)
+                            )
+                        }
+
+                        // Expandable content for the thinking process
+                        AnimatedVisibility(visible = isThinkProcessExpanded) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 4.dp, bottom = 8.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color.Black.copy(alpha = 0.2f))
+                                    .padding(8.dp)
+                            ) {
+                                Text(
+                                    text = thinkingProcess,
+                                    color = textColor.copy(alpha = 0.9f),
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
+                    }
+
+                    // Line btw Thinking & Answer
+                    if (finalAnswer.isNotBlank() && thinkingProcess.isNotBlank()) {
+                        Spacer(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp)
+                                .height(1.dp)
+                                .background(previewColor.copy(alpha = 0.2f))
+                        )
+                    }
+
+
+                    // --- Final Answer UI ---
+                    if (finalAnswer.isNotBlank()) {
+                        Text(text = finalAnswer, color = textColor)
+                    } else if (!isInThinkMode) {
+                        // Show non-think-mode streaming text directly
+                        Text(text = text, color = textColor)
+                    }
+
+                    if (performanceResult.isNotBlank()) {
+                        Spacer(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp)
+                                .height(1.dp)
+                                .background(previewColor.copy(alpha = 0.2f))
+                        )
+                        Text(text = performanceResult, color = textColor.copy(alpha = 0.8f))
+                    }
+
+                }
             }
         }
     }
@@ -279,8 +527,7 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun DefaultPreview() {
         MaterialTheme {
-            ChatbotScreen()
+            ChatbotScreen(isInThinkMode = true)
         }
     }
-
 }
