@@ -19,9 +19,9 @@
 #include <tensor.h>
 #include <util_func.h>
 
-#ifdef ENABLE_OPENCL
-#include "blas_kernels.h"
-#endif
+// #ifdef ENABLE_OPENCL
+// #include "blas_kernels.h"
+// #endif
 
 namespace nntrainer {
 
@@ -726,16 +726,16 @@ void FloatTensor::dot(std::vector<Tensor *> input, std::vector<Tensor *> output,
     int N = input[i]->getDim().width();
     void *mdata = (void *)input[i]->getData<uint8_t>();
     float *rdata = output[i]->getData<float>();
-#ifdef ENABLE_OPENCL
-    if (M == 1) {
-      gemm_q4_0(M, N, K, data, K, (void *)mdata, N, rdata, N);
-    } else {
-      gemm_q4_0_cl((void *)mdata, data, rdata, M, N, K);
-    }
-#else
+// #ifdef ENABLE_OPENCL
+//     if (M == 1) {
+//       gemm_q4_0(M, N, K, data, K, (void *)mdata, N, rdata, N);
+//     } else {
+//       gemm_q4_0_cl((void *)mdata, data, rdata, M, N, K);
+//     }
+// #else
     /// @todo Support multi-weight q4_0 for x64
     gemm_q4_0(M, N, K, data, K, (void *)mdata, N, rdata, N);
-#endif
+// #endif
   }
 }
 
@@ -892,15 +892,15 @@ Tensor &FloatTensor::dotQnK(Tensor const &input, Tensor &output, bool trans,
     M = getDim().height();
     K = getDim().width();
     N = input.getDim().width();
-#ifdef ENABLE_OPENCL
-    if (M == 1) {
-      gemm_q4_0(M, N, K, data, K, (void *)mdata, N, rdata, N);
-    } else {
-      gemm_q4_0_cl((void *)mdata, data, rdata, M, N, K);
-    }
-#else
+// #ifdef ENABLE_OPENCL
+//     if (M == 1) {
+//       gemm_q4_0(M, N, K, data, K, (void *)mdata, N, rdata, N);
+//     } else {
+//       gemm_q4_0_cl((void *)mdata, data, rdata, M, N, K);
+//     }
+// #else
     gemm_q4_0(M, N, K, data, K, (void *)mdata, N, rdata, N);
-#endif
+// #endif
     break;
 
   default:

@@ -45,11 +45,11 @@ void Engine::add_default_object() {
   init_backend(); // initialize cpu backend
   registerContext("cpu", &app_context);
 
-#ifdef ENABLE_OPENCL
-  auto &cl_context = nntrainer::ClContext::Global();
-
-  registerContext("gpu", &cl_context);
-#endif
+// #ifdef ENABLE_OPENCL
+//   auto &cl_context = nntrainer::ClContext::Global();
+//
+//   registerContext("gpu", &cl_context);
+// #endif
 }
 
 void Engine::initialize() noexcept {

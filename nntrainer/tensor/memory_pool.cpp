@@ -25,28 +25,28 @@
 #include <profiler.h>
 #include <vector>
 
-#if defined(_WIN32)
-#define GET_SYSTEM_ALIGMENT()                                                  \
-  ([]() -> size_t {                                                            \
-    SYSTEM_INFO sysInfo;                                                       \
-    GetSystemInfo(&sysInfo);                                                   \
-    return sysInfo.dwPageSize;                                                 \
-  })()
-
-#define ALIGNED_ALLOC(size) _aligned_malloc(size, GET_SYSTEM_ALIGMENT())
-#define ALIGNED_FREE(ptr) _aligned_free(ptr)
-#elif defined(__ANDROID__)
-#define RPCMEM_HEAP_ID_SYSTEM 25
-#define RPCMEM_DEFAULT_FLAGS 1
-#define ALIGNED_ALLOC(size)                                                    \
-  rpcmem_alloc(RPCMEM_HEAP_ID_SYSTEM, RPCMEM_DEFAULT_FLAGS, size)
-#define ALIGNED_FREE(ptr) rpcmem_free(ptr)
-#else
+// #if defined(_WIN32)
+// #define GET_SYSTEM_ALIGMENT()                                                  \
+//   ([]() -> size_t {                                                            \
+//     SYSTEM_INFO sysInfo;                                                       \
+//     GetSystemInfo(&sysInfo);                                                   \
+//     return sysInfo.dwPageSize;                                                 \
+//   })()
+//
+// #define ALIGNED_ALLOC(size) _aligned_malloc(size, GET_SYSTEM_ALIGMENT())
+// #define ALIGNED_FREE(ptr) _aligned_free(ptr)
+// #elif defined(__ANDROID__)
+// #define RPCMEM_HEAP_ID_SYSTEM 25
+// #define RPCMEM_DEFAULT_FLAGS 1
+// #define ALIGNED_ALLOC(size)                                                    \
+//   rpcmem_alloc(RPCMEM_HEAP_ID_SYSTEM, RPCMEM_DEFAULT_FLAGS, size)
+// #define ALIGNED_FREE(ptr) rpcmem_free(ptr)
+// #else
 #define GET_SYSTEM_ALIGMENT()                                                  \
   ([]() -> size_t { return sysconf(_SC_PAGE_SIZE); })()
 #define ALIGNED_ALLOC(size) std::aligned_alloc(GET_SYSTEM_ALIGMENT(), size)
 #define ALIGNED_FREE(ptr) free(ptr)
-#endif
+// #endif
 
 namespace nntrainer {
 
@@ -124,61 +124,61 @@ void MemoryPool::allocate() {
   if (mem_pool != nullptr)
     throw std::runtime_error("Memory pool is already allocated");
 
-#if defined(__ANDROID__)
-  int i = 0;
-#define RPCMEM_HEAP_ID_SYSTEM 25
-#define RPCMEM_DEFAULT_FLAGS 1
-  std::map<size_t, void *> offset_ptr;     // offset : ptr
-  std::map<size_t, size_t> allocated_size; // offset : memory size
-  std::map<size_t, std::vector<int>>
-    offset_indices; // offset : list of index which has same offset
-
-  for (auto &s : memory_offset) {
-    size_t current_size = memory_size.at(i);
-    auto it = offset_ptr.find(s);
-    if (it == offset_ptr.end()) {
-      void *ptr =
-        rpcmem_alloc(RPCMEM_HEAP_ID_SYSTEM, RPCMEM_DEFAULT_FLAGS, current_size);
-      memory_ptrs.push_back(ptr);
-      offset_ptr[s] = ptr;
-      allocated_size[s] = current_size;
-      offset_indices[s].push_back(i);
-    } else {
-      void *existing_ptr = it->second;
-      size_t max_size = allocated_size[s];
-      if (max_size < current_size) {
-        void *new_ptr = rpcmem_alloc(RPCMEM_HEAP_ID_SYSTEM,
-                                     RPCMEM_DEFAULT_FLAGS, current_size);
-
-        for (int idx : offset_indices[s]) {
-          memory_ptrs[idx] = new_ptr;
-        }
-        rpcmem_free(existing_ptr);
-        offset_ptr[s] = new_ptr;
-        allocated_size[s] = current_size;
-      }
-      memory_ptrs.push_back(offset_ptr[s]);
-      offset_indices[s].push_back(i);
-    }
-    i++;
-  }
-
-  mem_pool = calloc(1, 1);
-
-#else
-
-#ifdef ENABLE_OPENCL
-  auto *cl_context =
-    static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
-  mem_pool = cl_context->context_inst_.createSVMRegion(pool_size);
-
-  if (mem_pool == nullptr) {
-    throw std::runtime_error("Failed to allocate SVM memory pool of size " +
-                             std::to_string(pool_size) + " bytes");
-  }
-#else
+// #if defined(__ANDROID__)
+//   int i = 0;
+// #define RPCMEM_HEAP_ID_SYSTEM 25
+// #define RPCMEM_DEFAULT_FLAGS 1
+//   std::map<size_t, void *> offset_ptr;     // offset : ptr
+//   std::map<size_t, size_t> allocated_size; // offset : memory size
+//   std::map<size_t, std::vector<int>>
+//     offset_indices; // offset : list of index which has same offset
+//
+//   for (auto &s : memory_offset) {
+//     size_t current_size = memory_size.at(i);
+//     auto it = offset_ptr.find(s);
+//     if (it == offset_ptr.end()) {
+//       void *ptr =
+//         rpcmem_alloc(RPCMEM_HEAP_ID_SYSTEM, RPCMEM_DEFAULT_FLAGS, current_size);
+//       memory_ptrs.push_back(ptr);
+//       offset_ptr[s] = ptr;
+//       allocated_size[s] = current_size;
+//       offset_indices[s].push_back(i);
+//     } else {
+//       void *existing_ptr = it->second;
+//       size_t max_size = allocated_size[s];
+//       if (max_size < current_size) {
+//         void *new_ptr = rpcmem_alloc(RPCMEM_HEAP_ID_SYSTEM,
+//                                      RPCMEM_DEFAULT_FLAGS, current_size);
+//
+//         for (int idx : offset_indices[s]) {
+//           memory_ptrs[idx] = new_ptr;
+//         }
+//         rpcmem_free(existing_ptr);
+//         offset_ptr[s] = new_ptr;
+//         allocated_size[s] = current_size;
+//       }
+//       memory_ptrs.push_back(offset_ptr[s]);
+//       offset_indices[s].push_back(i);
+//     }
+//     i++;
+//   }
+//
+//   mem_pool = calloc(1, 1);
+//
+// #else
+//
+// #ifdef ENABLE_OPENCL
+//   auto *cl_context =
+//     static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+//   mem_pool = cl_context->context_inst_.createSVMRegion(pool_size);
+//
+//   if (mem_pool == nullptr) {
+//     throw std::runtime_error("Failed to allocate SVM memory pool of size " +
+//                              std::to_string(pool_size) + " bytes");
+//   }
+// #else
   mem_pool = calloc(pool_size, 1);
-#endif
+// #endif
 
   unsigned int idx = 1;
   for (auto &s : memory_offset) {
@@ -186,7 +186,7 @@ void MemoryPool::allocate() {
     memory_ptrs.push_back(ptr);
     idx++;
   }
-#endif
+// #endif
 
 #ifdef PROFILE
   static long long seq = 0;
@@ -252,14 +252,14 @@ void MemoryPool::allocateFSU() {
  */
 std::shared_ptr<MemoryData> MemoryPool::getMemory(unsigned int idx) {
 
-#if defined(__ANDROID__)
-  auto mem_data = std::make_shared<MemoryData>((void *)memory_ptrs.at(idx - 1));
-#else
+// #if defined(__ANDROID__)
+//   auto mem_data = std::make_shared<MemoryData>((void *)memory_ptrs.at(idx - 1));
+// #else
   if (mem_pool == nullptr)
     throw std::invalid_argument("Getting memory before allocation");
 
   auto mem_data = std::make_shared<MemoryData>((void *)memory_ptrs.at(idx - 1));
-#endif
+// #endif
   return mem_data;
 }
 
@@ -269,13 +269,13 @@ std::shared_ptr<MemoryData> MemoryPool::getMemory(unsigned int idx) {
  */
 void MemoryPool::deallocate() {
   if (mem_pool != nullptr) {
-#ifdef ENABLE_OPENCL
-    auto *cl_context =
-      static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
-    cl_context->context_inst_.releaseSVMRegion(mem_pool);
-#else
+// #ifdef ENABLE_OPENCL
+//     auto *cl_context =
+//       static_cast<ClContext *>(Engine::Global().getRegisteredContext("gpu"));
+//     cl_context->context_inst_.releaseSVMRegion(mem_pool);
+// #else
     free(mem_pool);
-#endif
+// #endif
     memory_size.clear();
     memory_validity.clear();
     memory_exec_order.clear();

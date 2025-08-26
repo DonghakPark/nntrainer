@@ -1384,6 +1384,7 @@ void Tensor::read(std::ifstream &file, size_t start_offset,
   // Do not read now but save file_fd in tensor
   if (is_virtual) {
     fd = file_fd;
+    prefecting();
     return;
   }
 
@@ -1607,8 +1608,21 @@ Tensor Tensor::getSharedDataTensor(const TensorDim dim_, size_t offset,
   return ret;
 }
 
-void Tensor::activate() {
+void Tensor::prefecting() {
+  auto page_size = sysconf(_SC_PAGE_SIZE);
 
+  auto file_offset = getFileOffset();
+  size_t off = (file_offset / page_size) * page_size;
+  size_t diff = file_offset - off;
+  size_t len = getMemoryBytes() + diff;
+
+  mapped_ptr = mmap(NULL, len, PROT_READ, MAP_PRIVATE , this->fd, off);
+  madvise(mapped_ptr, len, MADV_POPULATE_READ);
+  auto ret_munmap = munmap((void *)mapped_ptr, len);
+
+}
+void Tensor::activate() {
+  auto page_size = sysconf(_SC_PAGE_SIZE);
   NNTR_THROW_IF(!is_virtual, std::invalid_argument)
     << "non-virtual tensor cannot call activate()";
 #if defined(_WIN32)
@@ -1617,13 +1631,14 @@ void Tensor::activate() {
 #else
 
   auto file_offset = getFileOffset();
-  size_t off = (file_offset / 4096) * 4096;
+  size_t off = (file_offset / page_size) * page_size;
   size_t diff = file_offset - off;
   size_t len = getMemoryBytes() + diff;
 
-  mapped_ptr = mmap(NULL, len, PROT_READ, MAP_PRIVATE, this->fd, off);
+  mapped_ptr = mmap(NULL, len, PROT_READ, MAP_PRIVATE , this->fd, off);
 #ifdef __ANDROID__
   madvise(mapped_ptr, len, MADV_WILLNEED);
+  madvise(mapped_ptr, len, MADV_HUGEPAGE);
 #endif
   if (mapped_ptr == MAP_FAILED) {
     std::cerr << "[activate] mmap failed: " << strerror(errno) << std::endl;
@@ -1633,6 +1648,7 @@ void Tensor::activate() {
 }
 
 void Tensor::deactivate() {
+  auto page_size = sysconf(_SC_PAGE_SIZE);
 
   NNTR_THROW_IF(!is_virtual, std::invalid_argument)
     << "non-virtual tensor cannot call deactivate()";
@@ -1646,7 +1662,7 @@ void Tensor::deactivate() {
   };
 
   auto file_offset = getFileOffset();
-  size_t off = (file_offset / 4096) * 4096;
+  size_t off = (file_offset / page_size) * page_size;
   size_t diff = file_offset - off;
   size_t len = getMemoryBytes() + diff;
 

@@ -28,9 +28,9 @@
 #include <memory_planner.h>
 #include <tensor_wrap_specs.h>
 
-#ifdef ENABLE_OPENCL
-#include <cl_context.h>
-#endif
+// #ifdef ENABLE_OPENCL
+// #include <cl_context.h>
+// #endif
 
 #include <cstdlib>
 #include <dynamic_library_loader.h>
@@ -59,8 +59,8 @@
 #include <set>
 
 static const std::string func_tag = "[MemoryPool] ";
-typedef void *(*RpcMemAllocFn_t)(int, uint32_t, int);
-typedef void (*RpcMemFreeFn_t)(void *);
+// typedef void *(*RpcMemAllocFn_t)(int, uint32_t, int);
+// typedef void (*RpcMemFreeFn_t)(void *);
 
 enum {
   DL_NOW = 0x0001,
@@ -82,27 +82,27 @@ public:
    */
   explicit MemoryPool() :
     mem_pool(nullptr), pool_size(0), min_pool_size(0), n_wgrad(0) {
-
-#if defined(__ANDROID__)
-    void *handle =
-      DynamicLibraryLoader::loadLibrary("libcdsprpc.so", DL_NOW | DL_LOCAL);
-    const char *error_msg = DynamicLibraryLoader::getLastError();
-
-    rpcmem_alloc =
-      (RpcMemAllocFn_t)DynamicLibraryLoader::loadSymbol(handle, "rpcmem_alloc");
-    rpcmem_free =
-      (RpcMemFreeFn_t)DynamicLibraryLoader::loadSymbol(handle, "rpcmem_free");
-
-    auto close_dl = [handle] { DynamicLibraryLoader::freeLibrary(handle); };
-
-    if (rpcmem_alloc == nullptr || rpcmem_free == nullptr) {
-      NNTR_THROW_IF_CLEANUP(rpcmem_alloc == nullptr || rpcmem_free == nullptr,
-                            std::invalid_argument, close_dl)
-        << func_tag << "open rpc mem failed";
-    }
-#else
+//
+// #if defined(__ANDROID__)
+//     void *handle =
+//       DynamicLibraryLoader::loadLibrary("libcdsprpc.so", DL_NOW | DL_LOCAL);
+//     const char *error_msg = DynamicLibraryLoader::getLastError();
+//
+//     rpcmem_alloc =
+//       (RpcMemAllocFn_t)DynamicLibraryLoader::loadSymbol(handle, "rpcmem_alloc");
+//     rpcmem_free =
+//       (RpcMemFreeFn_t)DynamicLibraryLoader::loadSymbol(handle, "rpcmem_free");
+//
+//     auto close_dl = [handle] { DynamicLibraryLoader::freeLibrary(handle); };
+//
+//     if (rpcmem_alloc == nullptr || rpcmem_free == nullptr) {
+//       NNTR_THROW_IF_CLEANUP(rpcmem_alloc == nullptr || rpcmem_free == nullptr,
+//                             std::invalid_argument, close_dl)
+//         << func_tag << "open rpc mem failed";
+//     }
+// #else
     allocators = Engine::Global().getAllocators();
-#endif
+// #endif
   }
 
   /**
@@ -322,10 +322,10 @@ private:
 
   std::unordered_map<std::string, std::shared_ptr<nntrainer::MemAllocator>>
     allocators;
-#if defined(__ANDROID__)
-  RpcMemAllocFn_t rpcmem_alloc;
-  RpcMemFreeFn_t rpcmem_free;
-#endif
+// #if defined(__ANDROID__)
+//   RpcMemAllocFn_t rpcmem_alloc;
+//   RpcMemFreeFn_t rpcmem_free;
+// #endif
 };
 
 } // namespace nntrainer

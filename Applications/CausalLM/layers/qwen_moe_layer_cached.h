@@ -48,13 +48,13 @@ public:
    * @brief  Move constructor.
    *  @param[in] CachedSlimMoELayer &&
    */
-  CachedSlimMoELayer(CachedSlimMoELayer &&rhs) noexcept = default;
+  CachedSlimMoELayer(CachedSlimMoELayer &&rhs) noexcept = delete;
 
   /**
    * @brief  Move assignment operator.
    * @param[in] rhs CachedSlimMoELayer to be moved.
    */
-  CachedSlimMoELayer &operator=(CachedSlimMoELayer &&rhs) = default;
+  CachedSlimMoELayer &operator=(CachedSlimMoELayer &&rhs) = delete;
 
   /**
    * @copydoc Layer::finalize(InitLayerContext &context)
@@ -127,12 +127,14 @@ private:
   std::unordered_map<int, std::list<int>::iterator> iteration_map;
   std::unordered_map<int, double> expert_predict_scores;
   std::vector<bool> need_load;
+  std::mutex cache_mutex;
 
   unsigned int gate_idx;
 
   // Intermediate tensor indices
   unsigned int router_logits_idx;
   unsigned int expert_mask_idx;
+
   /**
    * @brief expert forward computation without memory copies
    * @param input Input tensor (reshaped to [total_tokens, 1, 1, hidden_size])

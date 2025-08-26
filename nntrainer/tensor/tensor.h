@@ -1980,7 +1980,7 @@ public:
    * @todo it is not supported on Windows yet
    */
   void activate();
-
+  void prefecting();
   /**
    * @brief deactivate virtual tensor
    * @note if the tensor is virtual and already activated, the tensor is

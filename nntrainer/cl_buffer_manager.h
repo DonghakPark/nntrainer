@@ -41,7 +41,7 @@ private:
   /**
    * @brief Buffer size in bytes preset (256 mebibytes)
    */
-  const size_t buffer_size_bytes = 1024 * 8192 * sizeof(float);
+  const size_t buffer_size_bytes =  sizeof(float);
   const size_t unused_buffer_bytes = sizeof(float);
 
   /// @note this size might be changed

@@ -34,9 +34,9 @@
 #include <tracer.h>
 #include <util_func.h>
 
-#ifdef ENABLE_OPENCL
-#include <cl_context.h>
-#endif
+// #ifdef ENABLE_OPENCL
+// #include <cl_context.h>
+// #endif
 
 namespace nntrainer {
 
