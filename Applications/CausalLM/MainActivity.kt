@@ -1,11 +1,10 @@
-package com.samsung.sflare
+package com.samsung.flare_diffusion
 
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,7 +18,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -28,12 +26,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -42,7 +38,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
@@ -57,16 +52,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
-import com.samsung.sflare.ui.theme.LightGray
-import com.samsung.sflare.ui.theme.NNTRBLUE
-import com.samsung.sflare.ui.theme.SFlareTheme
+import com.samsung.flare_diffusion.ui.theme.Flare_DiffusionTheme
+import com.samsung.flare_diffusion.ui.theme.LightGray
+import com.samsung.flare_diffusion.ui.theme.NNTRBLUE
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -77,12 +71,12 @@ data class ChatMessage(val text: String, val role: String)
 
 class MainActivity : ComponentActivity() {
 
-    private external fun processInput(input: ByteArray)
-    private external fun flareLoading()
+    // Diffusion Cpp JNI Function
+    private external fun DiffusionRun(input: ByteArray)
 
     private val responseFlow = MutableStateFlow("")
 
-    @Suppress("unused") // will use in jni(cpp code)
+    @Suppress("unused") // will use in Qwen(cpp code)
     fun onTokenReceived(tokenByte: ByteArray) {
         lifecycleScope.launch(Dispatchers.Main) {
             val token = String(tokenByte, StandardCharsets.UTF_8)
@@ -90,26 +84,20 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private val isInThinkMode = mutableStateOf(true)
-
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        System.loadLibrary("nntrainer_engine")
-        Log.i("[SFlare]", "nntrainer engine Loaded")
-
-        flareLoading()
-        Log.i("[SFlare]", "Flare Loading Done")
+        System.loadLibrary("diffusion_engine")
+        Log.i("[SFlare]", "diffusion engine Loaded")
 
         enableEdgeToEdge()
         setContent {
-            SFlareTheme {
-                val thinkMode by remember { isInThinkMode }
+            Flare_DiffusionTheme {
 
                 //Model Select variable
                 var isModelMenuExpanded by remember { mutableStateOf(false) }
-                val models = listOf("Qwen 30B-MoE", "Diffusion LLM", "OSS 20B-MoE")
+                val models = listOf("Diffusion LLM")
                 var selectedModel by remember { mutableStateOf(models[0]) }
 
                 Scaffold(topBar = {
@@ -147,7 +135,6 @@ class MainActivity : ComponentActivity() {
                                             modifier = Modifier.size(20.dp)
                                         )
                                     }
-
                                     DropdownMenu(
                                         expanded = isModelMenuExpanded,
                                         onDismissRequest = { isModelMenuExpanded = false },
@@ -165,28 +152,11 @@ class MainActivity : ComponentActivity() {
                                 }
 
                             }
-                        }, colors = TopAppBarDefaults.topAppBarColors(
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
                             containerColor = Color.White, titleContentColor = Color.Black
-                        ), actions = {
-                            TextButton(
-                                onClick = { isInThinkMode.value = !isInThinkMode.value },
-                                modifier = Modifier.border(
-                                    1.dp, Color.Black, RoundedCornerShape(30.dp)
-                                ),
-                            ) {
-                                Color.LightGray
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .padding(horizontal = 2.dp, vertical = 2.dp)
-                                ) {
-                                    Text(
-                                        text = if (thinkMode) "🤔Think" else "⚡Light",
-                                        color = if (thinkMode) Color.Blue else Color.Black,
-                                    )
-                                }
-                            }
-                        })
+                        ),
+                    )
                 }, content = { innerPadding ->
                     Surface(
                         modifier = Modifier
@@ -194,7 +164,7 @@ class MainActivity : ComponentActivity() {
                             .padding(innerPadding),
                         color = MaterialTheme.colorScheme.background
                     ) {
-                        ChatbotScreen(isInThinkMode = thinkMode)
+                        ChatbotScreen()
                     }
                 })
             }
@@ -203,7 +173,7 @@ class MainActivity : ComponentActivity() {
 
 
     @Composable
-    fun ChatbotScreen(isInThinkMode: Boolean) {
+    fun ChatbotScreen() {
         var inputText by remember {
             mutableStateOf(
                 "Give me a short introduction to large language model."
@@ -256,7 +226,7 @@ class MainActivity : ComponentActivity() {
                             UserMessage(message.text)
                         } else {
                             // Pass the full text to AssistantMessage, it will handle the parsing.
-                            AssistantMessage(message.text, isInThinkMode)
+                            AssistantMessage(message.text)
                         }
                     }
                 }
@@ -295,22 +265,18 @@ class MainActivity : ComponentActivity() {
                             if (inputText.isNotBlank()) {
                                 val userMessage = ChatMessage(inputText, "user")
 
-                                val assistantPlaceholderText = if (isInThinkMode) "<think>" else ""
-                                val assistantPlaceholder =
-                                    ChatMessage(assistantPlaceholderText, "assistant")
+                                val assistantPlaceholder = ChatMessage("", "assistant")
 
                                 conversationHistory =
                                     conversationHistory + userMessage + assistantPlaceholder
 
-                                val fullPrompt = if (isInThinkMode) {
+                                val fullPrompt =
                                     "<|im_start|>user\n${inputText}<|im_end|>\n<|im_start|>assistant\n"
-                                } else {
-                                    "<|im_start|>user\n${inputText}<|im_end|>\n<|im_start|>assistant\n<think>\n</think>"
-                                }
+
 
                                 responseFlow.value = ""
                                 lifecycleScope.launch(Dispatchers.IO) {
-                                    processInput(fullPrompt.toByteArray(StandardCharsets.UTF_8))
+                                    DiffusionRun(fullPrompt.toByteArray(StandardCharsets.UTF_8))
                                 }
                                 inputText = ""
                             }
@@ -365,65 +331,16 @@ class MainActivity : ComponentActivity() {
 
     // --- ENTIRELY REWRITTEN AssistantMessage ---
     @Composable
-    fun AssistantMessage(text: String, isInThinkMode: Boolean) {
-        var isThinkProcessExpanded by remember { mutableStateOf(false) }
-        var isPerformanceExpanded by remember { mutableStateOf(false) }
+    fun AssistantMessage(text: String) {
 
         // Define tags and parse the incoming text
-        val thinkStartTag = "<think>"
-        val thinkEndTag = "</think>"
-        val endTag = "<|im_end|>"
-        val perfTag = "[nntrainer_perf_result]"
-        val isThinking = isInThinkMode && thinkEndTag !in text
+        val noThinkAnswer = text.trim()
 
-
-        val thinkingProcess =
-            text.substringBefore(thinkEndTag, missingDelimiterValue = if (isThinking) text else "")
-                .substringAfter(thinkStartTag, missingDelimiterValue = "").trim()
-
-        val textAfterThink = text.substringAfter(thinkEndTag, "")
-        val finalAnswer =
-            textAfterThink.substringBefore(endTag, missingDelimiterValue = textAfterThink).trim()
-
-        val noThinkAnswer = text.substringBefore(endTag, text).trim()
-
-        val performanceResult = if (perfTag in text) {
-            text.substringAfter(perfTag, "").trim()
-        } else {
-            ""
-        }
-
-        val borderColor = if (isThinking) Color.Black else Color.Blue
+        val borderColor = Color.Blue
         val backgroundColor = Color.White
         val textColor = Color.Black
-        val previewColor = Color.Black
-        val CircleColor = Color.Blue
-
-        var animatedPreviewText by remember { mutableStateOf("Thinking...") }
-
-        LaunchedEffect(thinkingProcess, isThinking) {
-            val lastLine = thinkingProcess.lines().lastOrNull { it.isNotBlank() }
-            if (isThinking && !lastLine.isNullOrBlank()) {
-                val words = lastLine.split(" ")
-                val visibleWords = mutableListOf<String>()
-                words.forEach { word ->
-                    visibleWords.add(word)
-                    var currentText = visibleWords.joinToString(" ")
-                    val maxChars = 50
-                    while (currentText.length > maxChars && visibleWords.size > 1) {
-                        visibleWords.removeAt(0)
-                        currentText = visibleWords.joinToString(" ")
-                    }
-                    animatedPreviewText = currentText
-
-                }
-            } else if (!isThinking && thinkingProcess.isNotBlank()) {
-                animatedPreviewText = "Show Thought Process"
-            } else {
-                animatedPreviewText = "Thinking..."
-            }
-        }
-
+        Color.Black
+        Color.Blue
 
         Column(
             modifier = Modifier
@@ -431,17 +348,6 @@ class MainActivity : ComponentActivity() {
                 .padding(vertical = 8.dp),
             horizontalAlignment = Alignment.Start
         ) {
-//            Row(
-//                verticalAlignment = Alignment.CenterVertically,
-//                modifier = Modifier.padding(bottom = 4.dp)
-//            ) {
-//                Image(
-//                    painter = painterResource(id = R.drawable.flare_logo_v2),
-//                    contentDescription = "SFlare Logo",
-//                    modifier = Modifier.size(20.dp)
-//                )
-//                Spacer(modifier = Modifier.width(4.dp))
-
             Text(
                 text = "SFlare",
                 color = Color.Black,
@@ -466,149 +372,9 @@ class MainActivity : ComponentActivity() {
                     .padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    // --- Thinking Process UI ---
-                    if (isInThinkMode && (isThinking || thinkingProcess.isNotBlank())) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .clickable { isThinkProcessExpanded = !isThinkProcessExpanded }
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically) {
-                            if (isThinking) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    strokeWidth = 2.dp,
-                                    color = CircleColor.copy(alpha = 0.7f),
-                                    strokeCap = StrokeCap.Round
-                                )
-                                Text(
-                                    text = " Thinking",
-                                    color = previewColor.copy(alpha = 0.8f),
-                                    fontSize = 14.sp
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = "Thought Process",
-                                    modifier = Modifier.size(20.dp),
-                                    tint = CircleColor.copy(alpha = 0.7f)
-                                )
-                            }
-                            Spacer(
-                                modifier = Modifier
-                                    .padding(horizontal = 8.dp)
-                                    .height(20.dp)
-                                    .width(1.dp)
-                                    .background(previewColor.copy(alpha = 0.2f))
-                            )
-
-                            Text(
-                                text = animatedPreviewText,
-                                color = previewColor.copy(alpha = 0.6f),
-                                modifier = Modifier.weight(1f),
-                                maxLines = 1,
-                                fontSize = 14.sp
-                            )
-                            Icon(
-                                imageVector = if (isThinkProcessExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                contentDescription = "Expand",
-                                tint = previewColor.copy(alpha = 0.7f)
-                            )
-                        }
-
-                        // Expandable content for the thinking process
-                        AnimatedVisibility(visible = isThinkProcessExpanded) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 4.dp, bottom = 8.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(Color.Black.copy(alpha = 0.2f))
-                                    .padding(8.dp)
-                            ) {
-                                Text(
-                                    text = thinkingProcess,
-                                    color = textColor.copy(alpha = 0.7f),
-                                    fontSize = 14.sp
-                                )
-                            }
-                        }
-                    }
-
-                    // Line btw Thinking & Answer
-                    if (finalAnswer.isNotBlank() && thinkingProcess.isNotBlank()) {
-                        Spacer(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp)
-                                .height(1.dp)
-                                .background(previewColor.copy(alpha = 0.2f))
-                        )
-                    }
-
 
                     // --- Final Answer UI ---
-                    if (finalAnswer.isNotBlank()) {
-                        Text(text = finalAnswer, color = textColor)
-                    } else if (!isInThinkMode) {
-                        // Show non-think-mode streaming text directly
-                        Text(text = noThinkAnswer, color = textColor)
-                    }
-
-                    if (performanceResult.isNotBlank()) {
-                        Spacer(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp)
-                                .height(1.dp)
-                                .background(previewColor.copy(alpha = 0.2f))
-                        )
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .clickable { isPerformanceExpanded = !isPerformanceExpanded }
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.KeyboardArrowDown,
-                                contentDescription = "Performance Result",
-                                modifier = Modifier.size(20.dp),
-                                tint = CircleColor.copy(alpha = 0.7f)
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                text = "Show Performance",
-                                color = previewColor.copy(alpha = 0.8f),
-                                modifier = Modifier.weight(1f),
-                                fontSize = 14.sp
-                            )
-                            Icon(
-                                imageVector = if (isThinkProcessExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                contentDescription = "Expand",
-                                tint = previewColor.copy(alpha = 0.7f)
-                            )
-                        }
-                    }
-
-                    AnimatedVisibility(visible = isPerformanceExpanded) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 4.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color.Black.copy(alpha = 0.2f))
-                                .padding(8.dp)
-
-                        ) {
-                            Text(
-                                text = performanceResult,
-                                color = textColor.copy(alpha = 0.7f),
-                                fontSize = 12.sp
-                            )
-                        }
-                    }
+                    Text(text = noThinkAnswer, color = textColor)
                 }
             }
         }
@@ -618,7 +384,7 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun DefaultPreview() {
         MaterialTheme {
-            ChatbotScreen(isInThinkMode = true)
+            ChatbotScreen()
         }
     }
 }
