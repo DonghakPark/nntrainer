@@ -48,12 +48,5 @@ if host_machine.system() != 'windows'
   endif
 endif
 
-if get_option('enable_encoder')
-  subdir('LLaMA/jni')
-  if host_machine.system() != 'windows'
-  subdir('PicoGPT/jni')
-  endif
-  if (get_option('platform') != 'tizen') and (get_option('platform') != 'windows')
-    subdir('CausalLM')
-  endif
-endif
+
+subdir('CausalLM')
