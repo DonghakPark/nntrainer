@@ -143,14 +143,6 @@ protected:
   virtual void registerCustomLayers();
 
   /**
-   * @brief register Outputs
-   */
-  virtual void
-  registerOutputs(std::unique_ptr<tokenizers::Tokenizer> &tokenizer,
-                  std::vector<unsigned int> ids, unsigned int pos,
-                  const std::vector<bool> &eos_list);
-
-  /**
    * @brief generate
    */
   std::vector<unsigned int> generate(float *logits, bool do_sample,
@@ -201,8 +193,6 @@ protected:
   unsigned int MAX_POSITION_EMBEDDINGS;   /**< max position embeddings */
   bool MEMORY_SWAP;                       /**< Memory swap option */
   unsigned int FSU_LOOKAHEAD;
-
-  std::vector<int> pending_ids_;
 
   std::mt19937 rng; /**< Random Number Gen */
 };
