@@ -11,7 +11,7 @@ if (get_option('platform') == 'android')
   llm_tokenizer_lib_path = meson.current_source_dir() / 'libs' / 'libtokenizers_android_c.a'
 elif (get_option('platform') == 'windows')
   llm_tokenizer_lib_path = meson.current_source_dir() / 'libs' / 'libtokenizers_c.lib'
-else #Ubuntu, Tizen
+else #Ubuntu
   llm_tokenizer_lib_path = meson.current_source_dir() / 'libs' / 'libtokenizers_c.a'
 endif
 

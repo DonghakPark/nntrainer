@@ -276,15 +276,9 @@ void CausalLM::run(const WSTR prompt, bool do_sample) {
   // auto _input = tokenizer.encode(prompt);
   auto _input = tokenizer->Encode(converter.to_bytes(prompt));
 #else
-  // print input text
   std::cout << prompt << std::endl;
   // std::wstring text = converter.from_bytes(prompt);
   auto _input = tokenizer->Encode(prompt);
-  // std::cout << "input token ids : " << std::endl;
-  // for (auto element : _input) {
-  //   std::cout << element << " ";
-  // }
-  // std::cout << std::endl;
 #endif
 
   // _input.insert(_input.begin(), BOS_TOKEN_ID);
