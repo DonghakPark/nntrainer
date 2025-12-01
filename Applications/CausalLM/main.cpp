@@ -208,18 +208,18 @@ int main(int argc, char *argv[]) {
 #ifdef PROFILE
     start_peak_tracker();
 #endif
-#if defined(_WIN32)
-    model->run(input_text.c_str(), generation_cfg["do_sample"],
-               system_head_prompt.c_str(), system_tail_prompt.c_str());
-#else
-    model->run(input_text, generation_cfg["do_sample"], system_head_prompt,
-               system_tail_prompt);
-#endif
+// #if defined(_WIN32)
+//     model->run(input_text.c_str(), generation_cfg["do_sample"],
+//                system_head_prompt.c_str(), system_tail_prompt.c_str());
+// #else
+//     model->run(input_text, generation_cfg["do_sample"], system_head_prompt,
+//                system_tail_prompt);
+// #endif
 #ifdef PROFILE
-    stop_and_print_peak();
+     stop_and_print_peak();
 #endif
-    printMemoryUsage();
-
+     printMemoryUsage();
+  model->save_weight("gpt-oss-120b-q6k-q40-q40-.bin");
   } catch (const std::exception &e) {
     std::cerr << "\n[!] FATAL ERROR: " << e.what() << "\n";
     return EXIT_FAILURE;
