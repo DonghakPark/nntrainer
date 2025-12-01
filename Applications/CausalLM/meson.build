@@ -41,7 +41,6 @@ causallm_layer_dependencies = [
     causallm_cached_slim_gpt_oss_moe_layer_dep,
 ]
 
-
 tokenizer_dependencies = []
 tokenizer_path = meson.current_source_dir() / 'lib' / 'libtokenizers_c.a'
 

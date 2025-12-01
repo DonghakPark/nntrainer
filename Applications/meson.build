@@ -14,6 +14,5 @@ endif
 subdir('utils')
 
 if get_option('enable-transformer')
-
     subdir('CausalLM')
 endif

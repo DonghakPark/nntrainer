@@ -42,7 +42,6 @@ void shgemm(const unsigned int TStorageOrder, bool TransA, bool TransB,
   __fallback_sgemm(TStorageOrder, TransA, TransB, M, N, K, alpha, A, lda, B_,
                    ldb, beta, C, ldc);
 #endif
-
   delete[] B_;
 }
 

@@ -44,6 +44,7 @@
  * @param B rhs matrix
  * @param ldb leading dimension of B
  * @param beta float scale beta
+ *
  * @param C output matrix
  * @param ldc leading dimension of C
  */
