@@ -14,6 +14,7 @@ causallm_src += [
     meson.current_source_dir() / 'gptoss_causallm.cpp',
     meson.current_source_dir() / 'gptoss_cached_slim_causallm.cpp',
     meson.current_source_dir() / 'ernie_causallm.cpp',
+    meson.current_source_dir() / 'deepseek_v2_lite_causallm.cpp',
 ]
 
 executable_src = [
@@ -41,6 +42,7 @@ causallm_layer_dependencies = [
     casuallm_gptoss_moe_layer_dep,
     causallm_cached_slim_gpt_oss_moe_layer_dep,
     causallm_ernie_moe_layer_dep,
+    causallm_deepseek_moe_layer_dep
 ]
 
 if (get_option('platform') == 'windows') and (build_machine.system() == 'windows')

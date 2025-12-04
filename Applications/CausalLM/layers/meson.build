@@ -14,6 +14,7 @@ causallm_qkv_layer_src_abs = [meson.current_source_dir() / 'qkv_layer.cpp']
 causallm_gptoss_moe_layer_src_abs = [meson.current_source_dir() / 'gpt_oss_moe_layer.cpp']
 causallm_gptoss_moe_layer_cached_src_abs = [meson.current_source_dir() / 'gpt_oss_moe_layer_cached.cpp']
 causallm_ernie_moe_layer_src_abs = [meson.current_source_dir() / 'ernie_moe_layer.cpp']
+causallm_deepseek_moe_layer_src_abs = [meson.current_source_dir() / 'deepseek_moe_layer.cpp']
 
 openmp_dep = dependency('openmp')
 
@@ -187,5 +188,19 @@ causallm_ernie_moe_layer = shared_library(
 
 causallm_ernie_moe_layer_dep = declare_dependency(
     link_with: causallm_ernie_moe_layer,
+    include_directories: causallm_layer_inc
+)
+
+causallm_deepseek_moe_layer = shared_library(
+    'deepseek_moe_layer',
+    causallm_deepseek_moe_layer_src_abs,
+    include_directories: causallm_layer_inc,
+    dependencies: [nntrainer_dep, nntrainer_ccapi_dep],
+    install: true,
+    install_dir: application_install_dir
+)
+
+causallm_deepseek_moe_layer_dep = declare_dependency(
+    link_with: causallm_deepseek_moe_layer,
     include_directories: causallm_layer_inc
 )
