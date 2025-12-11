@@ -25,6 +25,15 @@ Even if NNtrainer runs on device, it provides full functionalities to train mode
 [ NNTrainer: Personalize neural networks on devices! ](https://www.youtube.com/watch?v=HKKowY78P1A), Samsung Developer Conference 2021 <br />
 [ NNTrainer: "On-device learning" ](https://www.youtube.com/embed/Jy_auavraKg?start=4035&end=4080), Samsung AI Forum 2021
 
+## Running MoE On Device
+
+NNTrainer enables running large-scale Mixture of Experts (MoE) models directly on device. Below are demonstrations of running MoE LLM on mobile devices:
+
+| GPT-OSS 20B | Qwen3 MoE 30B-A3B |
+|:-----------:|:-----------------:|
+| <video src="docs/videos/GPT_OSS_20B_Demo.mp4" autoplay loop muted playsinline width="320"></video> | <video src="docs/videos/Qwen_30B_Demo.mp4" autoplay loop muted playsinline width="320"></video> |
+| Running GPT-OSS 20B model on device | Running Qwen3 MoE 30B-A3B model on device |
+
 ## Official Releases
 
 |     | [Tizen](http://download.tizen.org/snapshots/tizen/unified/latest/repos/standard/packages/) | [Ubuntu](https://launchpad.net/~nnstreamer/+archive/ubuntu/ppa) | Android/NDK Build |
