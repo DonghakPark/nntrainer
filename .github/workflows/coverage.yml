@@ -50,6 +50,7 @@ jobs:
           '*/subprojects/*' \
           '*/test/*' \
           '*/Applications/*' \
+          'tf_schema_generated.*' \
           --output-file coverage_filtered.info \
           --ignore-errors unused
         genhtml coverage_filtered.info \
