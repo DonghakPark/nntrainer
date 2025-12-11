@@ -1,25 +1,25 @@
 // SPDX-License-Identifier: Apache-2.0
 /**
  * @file unittest_tensor_advanced.cpp
- * @date 11 December 2024
+ * @date 11 December 2025
  * @brief Advanced unit tests for Tensor operations to improve coverage
  * @see https://github.com/nnstreamer/nntrainer
  * @author Donghak Park <donghak.park@samsung.com>
  * @bug No known bugs except for NYI items
  */
 
-#include <gtest/gtest.h>
 #include <cmath>
-#include <random>
 #include <fstream>
+#include <gtest/gtest.h>
+#include <random>
 #include <sstream>
 
-#include <tensor.h>
-#include <tensor_dim.h>
 #include <float_tensor.h>
 #include <layer_context.h>
-#include <weight.h>
+#include <tensor.h>
+#include <tensor_dim.h>
 #include <var_grad.h>
+#include <weight.h>
 
 namespace {
 constexpr float TOLERANCE = 1e-5f;
@@ -148,7 +148,7 @@ TEST(FloatTensor, maxValue) {
   nntrainer::FloatTensor t(dim, true);
 
   t.setValue(0, 0, 0, 0, 1.0f);
-  t.setValue(0, 0, 0, 1, 99.0f);  // max
+  t.setValue(0, 0, 0, 1, 99.0f); // max
   t.setValue(0, 0, 0, 2, 3.0f);
   t.setValue(0, 0, 1, 0, -5.0f);
   t.setValue(0, 0, 1, 1, 42.0f);
@@ -164,7 +164,7 @@ TEST(FloatTensor, minValue) {
   t.setValue(0, 0, 0, 0, 1.0f);
   t.setValue(0, 0, 0, 1, 99.0f);
   t.setValue(0, 0, 0, 2, 3.0f);
-  t.setValue(0, 0, 1, 0, -50.0f);  // min
+  t.setValue(0, 0, 1, 0, -50.0f); // min
   t.setValue(0, 0, 1, 1, 42.0f);
   t.setValue(0, 0, 1, 2, 0.0f);
 
@@ -206,7 +206,7 @@ TEST(FloatTensor, print) {
 //==============================================================================
 
 TEST(Tensor, reshape) {
-  nntrainer::TensorDim dim(1, 2, 3, 4);  // 24 elements
+  nntrainer::TensorDim dim(1, 2, 3, 4); // 24 elements
   nntrainer::Tensor t(dim);
   t.setValue(1.0f);
 
@@ -224,7 +224,7 @@ TEST(Tensor, getDim) {
   nntrainer::Tensor t(dim);
 
   nntrainer::TensorDim result = t.getDim();
-  
+
   EXPECT_EQ(result.batch(), 2u);
   EXPECT_EQ(result.channel(), 3u);
   EXPECT_EQ(result.height(), 4u);
@@ -242,7 +242,7 @@ TEST(Tensor, getBatchSlice) {
     }
   }
 
-  nntrainer::Tensor slice = t.getBatchSlice(1, 1);  // Get batch 1
+  nntrainer::Tensor slice = t.getBatchSlice(1, 1); // Get batch 1
 
   EXPECT_EQ(slice.batch(), 1u);
   EXPECT_NEAR(slice.getValue(0, 0, 0, 0), 2.0f, TOLERANCE);
@@ -354,7 +354,7 @@ TEST(Tensor, clone) {
 TEST(Tensor, sum) {
   nntrainer::TensorDim dim(2, 2, 2, 2);
   nntrainer::Tensor t(dim);
-  t.setValue(1.0f);  // 16 elements, all 1.0
+  t.setValue(1.0f); // 16 elements, all 1.0
 
   // Sum along axis 0 (batch)
   nntrainer::Tensor sum0 = t.sum(0);
@@ -386,7 +386,8 @@ TEST(Weight, basic_construction) {
 TEST(VarGrad, basic_construction) {
   nntrainer::TensorDim dim(1, 1, 3, 3);
 
-  nntrainer::Var_Grad vg(dim, nntrainer::Initializer::ZEROS, true, false, "test_vg");
+  nntrainer::Var_Grad vg(dim, nntrainer::Initializer::ZEROS, true, false,
+                         "test_vg");
 
   EXPECT_EQ(vg.getName(), "test_vg");
 }

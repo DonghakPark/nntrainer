@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 /**
  * @file unittest_nntrainer_fallback.cpp
- * @date 11 December 2024
+ * @date 11 December 2025
  * @brief Unit tests for fallback CPU backend implementations
  * @see https://github.com/nnstreamer/nntrainer
  * @author Donghak Park <donghak.park@samsung.com>
@@ -54,8 +54,7 @@ std::vector<T> generate_random_int_vector(size_t size, T min_val, T max_val) {
 /**
  * @brief Compute relative error between two values
  */
-template <typename T>
-T relative_error(T a, T b) {
+template <typename T> T relative_error(T a, T b) {
   if (a == b)
     return 0;
   T max_val = std::max(std::abs(a), std::abs(b));
@@ -368,8 +367,8 @@ TEST(nntrainer_fallback, isamax_negative) {
 
   unsigned int result = nntrainer::__fallback_isamax(N, X.data(), 1);
 
-  // Implementation note: First iteration compares abs values to non-abs initial max
-  // After first comparison, max_val becomes abs(X[n]), so 10.0 > 5.0
+  // Implementation note: First iteration compares abs values to non-abs initial
+  // max After first comparison, max_val becomes abs(X[n]), so 10.0 > 5.0
   // Returns raw index in array (not stride-adjusted)
   EXPECT_EQ(result, 3u); // Found 5.0 which is compared against non-abs -10.0
 }
@@ -381,9 +380,9 @@ TEST(nntrainer_fallback, isamax_with_stride) {
   unsigned int result = nntrainer::__fallback_isamax(N, X.data(), 2);
 
   // With stride=2, it checks indices 0, 2, 4 -> values 1.0, 10.0, 5.0
-  // Implementation returns raw index (not logical position), so max 10 is at index 2
-  // But the loop does n=1; n+=incX so it checks indices 1, 3, 5 -> 100, 100, 100
-  // First hit at index 1 wins
+  // Implementation returns raw index (not logical position), so max 10 is at
+  // index 2 But the loop does n=1; n+=incX so it checks indices 1, 3, 5 -> 100,
+  // 100, 100 First hit at index 1 wins
   EXPECT_EQ(result, 1u);
 }
 
@@ -727,19 +726,19 @@ TEST(nntrainer_fallback, scopy_int4_to_float32_basic) {
 
   nntrainer::__fallback_scopy_int4_to_float32(N, X.data(), 1, Y.data(), 1);
 
-  // For each byte: Y[2*idx] = X[idx] >> 4 (high nibble), Y[2*idx+1] = X[idx] & 0x0f (low nibble)
-  // 0x12: high = 1, low = 2
-  EXPECT_NEAR(Y[0], 1.0f, TOLERANCE);   // 0x12 >> 4 = 1
-  EXPECT_NEAR(Y[1], 2.0f, TOLERANCE);   // 0x12 & 0x0f = 2
+  // For each byte: Y[2*idx] = X[idx] >> 4 (high nibble), Y[2*idx+1] = X[idx] &
+  // 0x0f (low nibble) 0x12: high = 1, low = 2
+  EXPECT_NEAR(Y[0], 1.0f, TOLERANCE); // 0x12 >> 4 = 1
+  EXPECT_NEAR(Y[1], 2.0f, TOLERANCE); // 0x12 & 0x0f = 2
   // 0x34: high = 3, low = 4
-  EXPECT_NEAR(Y[2], 3.0f, TOLERANCE);   // 0x34 >> 4 = 3
-  EXPECT_NEAR(Y[3], 4.0f, TOLERANCE);   // 0x34 & 0x0f = 4
+  EXPECT_NEAR(Y[2], 3.0f, TOLERANCE); // 0x34 >> 4 = 3
+  EXPECT_NEAR(Y[3], 4.0f, TOLERANCE); // 0x34 & 0x0f = 4
   // 0x56: high = 5, low = 6
-  EXPECT_NEAR(Y[4], 5.0f, TOLERANCE);   // 0x56 >> 4 = 5
-  EXPECT_NEAR(Y[5], 6.0f, TOLERANCE);   // 0x56 & 0x0f = 6
+  EXPECT_NEAR(Y[4], 5.0f, TOLERANCE); // 0x56 >> 4 = 5
+  EXPECT_NEAR(Y[5], 6.0f, TOLERANCE); // 0x56 & 0x0f = 6
   // 0x78: high = 7, low = 8
-  EXPECT_NEAR(Y[6], 7.0f, TOLERANCE);   // 0x78 >> 4 = 7
-  EXPECT_NEAR(Y[7], 8.0f, TOLERANCE);   // 0x78 & 0x0f = 8
+  EXPECT_NEAR(Y[6], 7.0f, TOLERANCE); // 0x78 >> 4 = 7
+  EXPECT_NEAR(Y[7], 8.0f, TOLERANCE); // 0x78 & 0x0f = 8
 }
 
 TEST(nntrainer_fallback, scopy_int8_to_float32_basic) {
@@ -849,12 +848,12 @@ TEST(nntrainer_fallback, clamp_basic) {
   nntrainer::__fallback_clamp<float>(input.data(), output.data(), N, -1.0f,
                                      1.0f);
 
-  EXPECT_NEAR(output[0], -1.0f, TOLERANCE);  // Clamped to lower
-  EXPECT_NEAR(output[1], -0.5f, TOLERANCE);  // Unchanged
-  EXPECT_NEAR(output[2], 0.0f, TOLERANCE);   // Unchanged
-  EXPECT_NEAR(output[3], 0.5f, TOLERANCE);   // Unchanged
-  EXPECT_NEAR(output[4], 1.0f, TOLERANCE);   // Clamped to upper
-  EXPECT_NEAR(output[5], 1.0f, TOLERANCE);   // Clamped to upper
+  EXPECT_NEAR(output[0], -1.0f, TOLERANCE); // Clamped to lower
+  EXPECT_NEAR(output[1], -0.5f, TOLERANCE); // Unchanged
+  EXPECT_NEAR(output[2], 0.0f, TOLERANCE);  // Unchanged
+  EXPECT_NEAR(output[3], 0.5f, TOLERANCE);  // Unchanged
+  EXPECT_NEAR(output[4], 1.0f, TOLERANCE);  // Clamped to upper
+  EXPECT_NEAR(output[5], 1.0f, TOLERANCE);  // Clamped to upper
 }
 
 //==============================================================================
@@ -900,7 +899,8 @@ TEST(nntrainer_fallback_kleidiai, ref_quant_qa8dx_f32_basic) {
 
   // Output: scale (float) + offset (int32) + quantized values (int8 * k) per
   // row
-  const size_t dst_stride = sizeof(float) + sizeof(int32_t) + k * sizeof(int8_t);
+  const size_t dst_stride =
+    sizeof(float) + sizeof(int32_t) + k * sizeof(int8_t);
   std::vector<int8_t> lhs_qa8dx(m * dst_stride, 0);
 
   ref_quant_qa8dx_f32(m, k, lhs_f32.data(), lhs_qa8dx.data());
@@ -927,7 +927,8 @@ TEST(nntrainer_fallback_kleidiai, ref_matmul_f32_qa8dx_qs4cx_nxk) {
   std::vector<float> rhs_f32 = generate_random_vector<float>(n * k);
 
   // Quantize LHS
-  const size_t lhs_stride = sizeof(float) + sizeof(int32_t) + k * sizeof(int8_t);
+  const size_t lhs_stride =
+    sizeof(float) + sizeof(int32_t) + k * sizeof(int8_t);
   std::vector<int8_t> lhs_qa8dx(m * lhs_stride, 0);
   ref_quant_qa8dx_f32(m, k, lhs_f32.data(), lhs_qa8dx.data());
 
@@ -965,7 +966,8 @@ TEST(nntrainer_fallback_kleidiai, ref_matmul_f32_qa8dx_qs4cx_kxn) {
   std::vector<float> rhs_f32 = generate_random_vector<float>(n * k);
 
   // Quantize LHS
-  const size_t lhs_stride = sizeof(float) + sizeof(int32_t) + k * sizeof(int8_t);
+  const size_t lhs_stride =
+    sizeof(float) + sizeof(int32_t) + k * sizeof(int8_t);
   std::vector<int8_t> lhs_qa8dx(m * lhs_stride, 0);
   ref_quant_qa8dx_f32(m, k, lhs_f32.data(), lhs_qa8dx.data());
 
@@ -999,11 +1001,14 @@ TEST(nntrainer_fallback_kleidiai, ref_matmul_f32_qa8dx_qs4cx_with_clamp) {
   const size_t k = 8;
 
   // Generate input data with larger values
-  std::vector<float> lhs_f32 = generate_random_vector<float>(m * k, -10.0f, 10.0f);
-  std::vector<float> rhs_f32 = generate_random_vector<float>(n * k, -10.0f, 10.0f);
+  std::vector<float> lhs_f32 =
+    generate_random_vector<float>(m * k, -10.0f, 10.0f);
+  std::vector<float> rhs_f32 =
+    generate_random_vector<float>(n * k, -10.0f, 10.0f);
 
   // Quantize LHS
-  const size_t lhs_stride = sizeof(float) + sizeof(int32_t) + k * sizeof(int8_t);
+  const size_t lhs_stride =
+    sizeof(float) + sizeof(int32_t) + k * sizeof(int8_t);
   std::vector<int8_t> lhs_qa8dx(m * lhs_stride, 0);
   ref_quant_qa8dx_f32(m, k, lhs_f32.data(), lhs_qa8dx.data());
 
