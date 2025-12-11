@@ -65,7 +65,9 @@ T relative_error(T a, T b) {
 }
 
 constexpr float TOLERANCE = 1e-5f;
+constexpr float PI = 3.14159265358979323846f;
 
+/// @brief generate sequence 1, 2, 3, 4, 5
 } // namespace
 
 //==============================================================================
@@ -471,7 +473,7 @@ TEST(nntrainer_fallback, ele_div_basic) {
 
 TEST(nntrainer_fallback, sine_basic) {
   const unsigned int N = 4;
-  std::vector<float> X = {0.0f, M_PI / 6.0f, M_PI / 4.0f, M_PI / 2.0f};
+  std::vector<float> X = {0.0f, PI / 6.0f, PI / 4.0f, PI / 2.0f};
   std::vector<float> Y(N, 0.0f);
 
   nntrainer::__fallback_sine<float>(N, X.data(), Y.data(), 1.0f, 1.0f);
@@ -484,7 +486,7 @@ TEST(nntrainer_fallback, sine_basic) {
 
 TEST(nntrainer_fallback, sine_with_alpha_beta) {
   const unsigned int N = 1;
-  std::vector<float> X = {M_PI / 2.0f};
+  std::vector<float> X = {PI / 2.0f};
   std::vector<float> Y(N, 0.0f);
 
   nntrainer::__fallback_sine<float>(N, X.data(), Y.data(), 2.0f, 3.0f);
@@ -495,7 +497,7 @@ TEST(nntrainer_fallback, sine_with_alpha_beta) {
 
 TEST(nntrainer_fallback, cosine_basic) {
   const unsigned int N = 4;
-  std::vector<float> X = {0.0f, M_PI / 3.0f, M_PI / 4.0f, M_PI / 2.0f};
+  std::vector<float> X = {0.0f, PI / 3.0f, PI / 4.0f, PI / 2.0f};
   std::vector<float> Y(N, 0.0f);
 
   nntrainer::__fallback_cosine<float>(N, X.data(), Y.data(), 1.0f, 1.0f);
