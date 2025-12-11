@@ -1,6 +1,6 @@
 # NNtrainer
 
-[![Code Coverage](http://ci.nnstreamer.ai/nntrainer/ci/badge/codecoverage.svg)](http://ci.nnstreamer.ai/nntrainer/ci/gcov_html/index.html)
+[![Code Coverage](https://img.shields.io/endpoint?url=https://nntrainer.github.io/coverage_result/coverage.json)](https://nntrainer.github.io/coverage_result/)
 ![GitHub repo size](https://img.shields.io/github/repo-size/nnstreamer/nntrainer)
 ![GitHub issues](https://img.shields.io/github/issues/nnstreamer/nntrainer)
 ![GitHub pull requests](https://img.shields.io/github/issues-pr/nnstreamer/nntrainer)
