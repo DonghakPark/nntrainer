@@ -38,10 +38,9 @@ NNTrainer supports Large Language Model (LLM) inference! Please refer to `Applic
 
   #### 📱 Running MoE on your mobile phone
 
-  | GPT-OSS 20B | Qwen3 MoE 30B-A3B |
-  |:-----------:|:-----------------:|
-  | <video src="docs/videos/GPT_OSS_20B_Demo.mp4" autoplay loop muted playsinline width="320"></video> | <video src="docs/videos/Qwen_30B_Demo.mp4" autoplay loop muted playsinline width="320"></video> |
-  | Running GPT-OSS 20B model on device | Running Qwen3 MoE 30B-A3B model on device |
+| GPT-OSS 20B | Qwen3 MoE 30B-A3B |
+|:-----------:|:-----------------:|
+| <img src="docs/videos/GPT_OSS_20B_Demo.gif" width="360"> | <img src="docs/videos/Qwen_30B_Demo.gif" width="360"> |
 
   #### 💻 Running MoE on your PC
 
