@@ -54,15 +54,13 @@ NNTrainer supports Large Language Model (LLM) inference! Please refer to `Applic
 
 ## Official Releases
 
-|     | [Tizen](http://download.tizen.org/snapshots/tizen/unified/latest/repos/standard/packages/) | [Ubuntu](https://launchpad.net/~nnstreamer/+archive/ubuntu/ppa) | Android/NDK Build |
-| :-- | :--: | :--: | :--: |
-|     | 6.0M2 and later | 22.04/24.04 | 9/P |
-| arm | [![armv7l badge](http://ci.nnstreamer.ai/nntrainer/ci/daily-build/badge/tizen.armv7l_result_badge.svg)](http://ci.nnstreamer.ai/nntrainer/ci/daily-build/build_result/) | Available  | Ready |
-| arm64 |  [![aarch64 badge](http://ci.nnstreamer.ai/nntrainer/ci/daily-build/badge/tizen.aarch64_result_badge.svg)](http://ci.nnstreamer.ai/nntrainer/ci/daily-build/build_result/) | Available  | [![android badge](http://ci.nnstreamer.ai/nntrainer/ci/daily-build/badge/arm64_v8a_android_result_badge.svg)](http://ci.nnstreamer.ai/nntrainer/ci/daily-build/build_result/) |
-| x64 | [![x64 badge](http://ci.nnstreamer.ai/nntrainer/ci/daily-build/badge/tizen.x86_64_result_badge.svg)](http://ci.nnstreamer.ai/nntrainer/ci/daily-build/build_result/)  | [![ubuntu badge](http://ci.nnstreamer.ai/nntrainer/ci/daily-build/badge/ubuntu_result_badge.svg)](http://ci.nnstreamer.ai/nntrainer/ci/daily-build/build_result/)  | Ready  |
-| x86 | [![x86 badge](http://ci.nnstreamer.ai/nntrainer/ci/daily-build/badge/tizen.i586_result_badge.svg)](http://ci.nnstreamer.ai/nntrainer/ci/daily-build/build_result/)  | N/A  | N/A  |
-| Publish | [Tizen Repo](http://download.tizen.org/snapshots/tizen/unified/latest/repos/standard/packages/) | [PPA](https://launchpad.net/~nnstreamer/+archive/ubuntu/ppa) |   |
-| API | C (Official) | C/C++ | C/C++  |
+|     | [Tizen](http://download.tizen.org/snapshots/tizen/unified/latest/repos/standard/packages/) | [Ubuntu](https://launchpad.net/~nnstreamer/+archive/ubuntu/ppa) | Android/NDK Build | Windows |
+| :-- | :--: | :--: | :--: | :--: |
+|     | 7.0M2 and later | 22.04/24.04 | 9/P | windows-2022 and later |
+| arm64 | [![Tizen ARM](https://github.com/nnstreamer/nntrainer/actions/workflows/daily_build_tizen_arm.yml/badge.svg)](https://github.com/nnstreamer/nntrainer/actions/workflows/daily_build_tizen_arm.yml) | [![Ubuntu](https://github.com/nnstreamer/nntrainer/actions/workflows/daily_build.yml/badge.svg)](https://github.com/nnstreamer/nntrainer/actions/workflows/daily_build.yml) | [![Android](https://github.com/nnstreamer/nntrainer/actions/workflows/daily_build_android.yml/badge.svg)](https://github.com/nnstreamer/nntrainer/actions/workflows/daily_build_android.yml) | [![Windows ARM](https://github.com/nnstreamer/nntrainer/actions/workflows/daily_build_windows_arm.yml/badge.svg)](https://github.com/nnstreamer/nntrainer/actions/workflows/daily_build_windows_arm.yml) |
+| x86_64 | [![Tizen x86_64](https://github.com/nnstreamer/nntrainer/actions/workflows/daily_build_tizen_x86_64.yml/badge.svg)](https://github.com/nnstreamer/nntrainer/actions/workflows/daily_build_tizen_x86_64.yml) | [![Ubuntu](https://github.com/nnstreamer/nntrainer/actions/workflows/daily_build.yml/badge.svg)](https://github.com/nnstreamer/nntrainer/actions/workflows/daily_build.yml) | N/A | [![Windows x86_64](https://github.com/nnstreamer/nntrainer/actions/workflows/daily_build_windows_x86_64.yml/badge.svg)](https://github.com/nnstreamer/nntrainer/actions/workflows/daily_build_windows_x86_64.yml) |
+| Publish | [Tizen Repo](http://download.tizen.org/snapshots/tizen/unified/latest/repos/standard/packages/) | [PPA](https://launchpad.net/~nnstreamer/+archive/ubuntu/ppa) | | |
+| API | C (Official) | C/C++ | C/C++ | C/C++ |
 
 - Ready: CI system ensures build-ability and unit-testing. Users may easily build and execute. However, we do not have automated release & deployment system for this instance.
 - Available: binary packages are released and deployed automatically and periodically along with CI tests.
