@@ -1,4 +1,4 @@
-name: "Daily Build Test - Tizen x86_64"
+name: "Tizen x86_64"
 
 on:
   schedule:

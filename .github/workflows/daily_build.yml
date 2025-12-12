@@ -1,4 +1,4 @@
-name: "Daily Build Test - Ubuntu"
+name: "Ubuntu"
 
 on:
   schedule:

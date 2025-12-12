@@ -1,4 +1,4 @@
-name: "Daily Build Test - Windows ARM"
+name: "Windows ARM"
 
 on:
   schedule:

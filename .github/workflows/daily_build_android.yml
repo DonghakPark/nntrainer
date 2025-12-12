@@ -1,4 +1,4 @@
-name: "Daily Build Test - Android NDK"
+name: "Android"
 
 on:
   schedule:
